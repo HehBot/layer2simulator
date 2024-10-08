@@ -5,6 +5,9 @@
 
 #include <cassert>
 #include <condition_variable>
+#include <ctime>
+#include <fstream>
+#include <iostream>
 #include <map>
 #include <mutex>
 #include <queue>
@@ -16,6 +19,10 @@
 void Node::send_packet(MACAddress dest_mac, std::vector<uint8_t> const& packet) const
 {
     simul.send_packet(this->mac, dest_mac, packet);
+}
+void Node::log(std::string logline) const
+{
+    simul.log(this->mac, this->ip, logline);
 }
 
 class NodeThread {
@@ -43,6 +50,9 @@ public:
     };
 
 private:
+    // we need to ensure that `send_segment` and `receive_packet` calls on `node`
+    // are synchronised so that the extended implementation does not have to perform
+    // locking on data structures
     Node* node;
 
     std::thread receive_thread;
@@ -70,8 +80,6 @@ private:
                 node->receive_packet(f.src_mac, f.packet);
                 inbound.pop();
             }
-
-            ul.unlock();
         }
     }
 
@@ -87,13 +95,16 @@ public:
     NodeThread(Node* node, std::vector<SegmentToSendInfo> const& outbound) : node(node), has_ended(false), outbound(outbound) { }
     ~NodeThread()
     {
-        send_thread.join();
-
         std::unique_lock<std::mutex> ul(mt);
         has_ended = true;
         ul.unlock();
         cv.notify_one();
         receive_thread.join();
+    }
+    // TODO interface is hacky but needed for correctness
+    void end_send()
+    {
+        send_thread.join();
     }
     void run()
     {
@@ -111,7 +122,6 @@ public:
 
 void Simulation::run()
 {
-    std::cout << "Running simulation\n";
     for (auto const& g : nodes)
         g.second->run();
 }
@@ -126,8 +136,11 @@ void Simulation::send_packet(MACAddress src_mac, MACAddress dest_mac, std::vecto
     nt->receive_frame(src_mac, packet);
 }
 
-Simulation::Simulation(std::ifstream& i)
+Simulation::Simulation(bool log_enabled, std::istream& i)
+    : log_enabled(log_enabled)
 {
+    clock_gettime(CLOCK_MONOTONIC, &tp_start);
+
     auto j = nlohmann::json::parse(i);
     if (!j.contains("node_type"))
         throw std::invalid_argument("Bad network file: No 'node_type' specified");
@@ -137,6 +150,7 @@ Simulation::Simulation(std::ifstream& i)
     auto const& nt_json = j["node_type"];
     enum class NT {
         NAIVE,
+        // TODO add others
     } node_type;
     if (!nt_json.is_string())
         throw std::invalid_argument("Bad network file: Invalid 'node_type', must be a string!");
@@ -165,7 +179,7 @@ Simulation::Simulation(std::ifstream& i)
 
         if (!node_json.contains("ip"))
             throw std::invalid_argument("Bad network file: Invalid node, no 'ip' specified");
-        auto const& ip_json = node_json["mac"];
+        auto const& ip_json = node_json["ip"];
         if (!ip_json.is_number_integer())
             throw std::invalid_argument("Bad network file: Invalid node, 'ip' should be an integer");
         ips[mac] = IPAddress(ip_json);
@@ -205,14 +219,36 @@ Simulation::Simulation(std::ifstream& i)
         case NT::NAIVE:
             node = new NaiveNode(*this, mac, ips[mac]);
             break;
+        // TODO add others
         default:
             __builtin_unreachable();
         }
         nodes[mac] = new NodeThread(node, segments_to_send_info[mac]);
     }
+
+    if (log_enabled) {
+        for (auto const& g : nodes) {
+            MACAddress mac = g.first;
+            log_streams[mac] = new std::ofstream(std::string("node-") + std::to_string(mac) + ".log");
+        }
+    }
 }
 Simulation::~Simulation()
 {
     for (auto const& g : nodes)
+        g.second->end_send();
+    for (auto const& g : nodes) {
         delete g.second;
+        delete log_streams[g.first];
+    }
+}
+
+void Simulation::log(MACAddress mac, IPAddress ip, std::string logline) const
+{
+    if (log_enabled) {
+        struct timespec tp;
+        clock_gettime(CLOCK_MONOTONIC, &tp);
+        double dur = 1000 * ((tp.tv_sec + 1e-9 * tp.tv_nsec) - (tp_start.tv_sec + 1e-9 * tp_start.tv_nsec));
+        (*log_streams.at(mac)) << "[" << dur << "ms] [MAC:" << mac << ",IP:" << ip << "]\t" << logline << '\n';
+    }
 }

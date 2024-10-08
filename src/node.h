@@ -2,6 +2,7 @@
 #define NODE_H
 
 #include <cstdint>
+#include <string>
 #include <vector>
 
 struct Simulation;
@@ -27,6 +28,8 @@ public:
 protected:
     // XXX use this in your implementation of send_segment
     void send_packet(MACAddress dest_mac, std::vector<uint8_t> const& packet) const;
+    // XXX use this for debugging (writes logs to a file named "node-`mac`.log" )
+    void log(std::string) const;
 };
 
 #endif // NODE_H

@@ -3,7 +3,8 @@
 
 #include "node.h"
 
-#include <fstream>
+#include <ctime>
+#include <iosfwd>
 #include <map>
 #include <set>
 #include <vector>
@@ -11,14 +12,22 @@
 class NodeThread;
 
 struct Simulation {
+private:
+    // for logging
+    bool log_enabled;
+    struct timespec tp_start;
+    std::map<MACAddress, std::ostream*> log_streams;
+
+public:
     std::map<MACAddress, NodeThread*> nodes;
     std::map<MACAddress, std::set<MACAddress>> network_graph;
 
-    Simulation(std::ifstream& i);
+    Simulation(bool log_enabled, std::istream& i);
     void run();
     ~Simulation();
 
     void send_packet(MACAddress src_mac, MACAddress dest_mac, std::vector<uint8_t> const& packet);
+    void log(MACAddress, IPAddress, std::string logline) const;
 };
 
 #endif // SIMULATION_H
