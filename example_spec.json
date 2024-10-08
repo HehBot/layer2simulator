@@ -1,0 +1,51 @@
+
+{
+    "node_type": "naive",
+    "network_info": [
+        {
+            "mac": 1,
+            "ip": 1000,
+            "neighbours": [2,3],
+            "segments_to_send": [
+                {
+                    "dest_ip": 2000,
+                    "segment": "Hello from 1000 to 2000"
+                },
+                {
+                    "dest_ip": 3000,
+                    "segment": "Hello from 1000 to 3000"
+                }
+            ]
+        },
+        {
+            "mac": 2,
+            "ip": 2000,
+            "neighbours": [3,1],
+            "segments_to_send": [
+                {
+                    "dest_ip": 3000,
+                    "segment": "Hello from 2000 to 3000"
+                },
+                {
+                    "dest_ip": 1000,
+                    "segment": "Hello from 2000 to 1000"
+                }
+            ]
+        },
+        {
+            "mac": 3,
+            "ip": 3000,
+            "neighbours": [1,2],
+            "segments_to_send": [
+                {
+                    "dest_ip": 1000,
+                    "segment": "Hello from 3000 to 1000"
+                },
+                {
+                    "dest_ip": 2000,
+                    "segment": "Hello from 3000 to 2000"
+                }
+            ]
+        }
+    ]
+}
