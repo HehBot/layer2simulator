@@ -148,13 +148,17 @@ Simulation::Simulation(bool log_enabled, std::istream& i)
         throw std::invalid_argument("Bad network file: No 'network_info' specified");
 
     auto const& nt_json = j["node_type"];
+
     enum class NT {
         NAIVE,
-        // TODO add others
+        // XXX add others
     } node_type;
+
     if (!nt_json.is_string())
         throw std::invalid_argument("Bad network file: Invalid 'node_type', must be a string!");
+
     auto nt_str = std::string(nt_json);
+    // XXX add others
     if (nt_str == "naive")
         node_type = NT::NAIVE;
     else
@@ -219,7 +223,7 @@ Simulation::Simulation(bool log_enabled, std::istream& i)
         case NT::NAIVE:
             node = new NaiveNode(*this, mac, ips[mac]);
             break;
-        // TODO add others
+        // XXX add others
         default:
             __builtin_unreachable();
         }

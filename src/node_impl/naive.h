@@ -33,7 +33,7 @@ public:
             return;
         }
 
-        std::vector<uint8_t> segment(packet.begin() + 4, packet.end());
+        std::vector<uint8_t> segment(packet.begin() + sizeof(dest_ip), packet.end());
         log("Received packet:\t" + std::string(segment.begin(), segment.end()));
     }
 };
