@@ -27,6 +27,11 @@ void Node::log(std::string logline) const
 
 class NodeThread {
 public:
+    // we need to ensure that `send_segment` and `receive_packet` calls on `node`
+    // are synchronised so that the extended implementation does not have to perform
+    // locking on data structures
+    std::mutex send_recv_mt;
+
     struct SegmentToSendInfo {
         IPAddress dest_ip;
         std::vector<uint8_t> segment;
@@ -50,9 +55,6 @@ public:
     };
 
 private:
-    // we need to ensure that `send_segment` and `receive_packet` calls on `node`
-    // are synchronised so that the extended implementation does not have to perform
-    // locking on data structures
     Node* node;
 
     std::thread receive_thread;
@@ -77,7 +79,9 @@ private:
 
             while (inbound.size() > 0) {
                 PacketReceivedInfo const& f = inbound.front();
+                send_recv_mt.lock();
                 node->receive_packet(f.src_mac, f.packet);
+                send_recv_mt.unlock();
                 inbound.pop();
             }
         }
@@ -87,8 +91,11 @@ private:
     std::thread send_thread;
     void send_loop()
     {
-        for (auto const& g : outbound)
+        for (auto const& g : outbound) {
+            send_recv_mt.lock();
             node->send_segment(g.dest_ip, g.segment);
+            send_recv_mt.unlock();
+        }
     }
 
 public:
@@ -132,8 +139,14 @@ void Simulation::send_packet(MACAddress src_mac, MACAddress dest_mac, std::vecto
         throw std::invalid_argument(std::to_string(dest_mac) + " is not a valid MAC address");
     if (network_graph[src_mac].count(dest_mac) == 0)
         throw std::invalid_argument(std::to_string(dest_mac) + " is not a MAC address of any neighbour of " + std::to_string(src_mac));
-    NodeThread* nt = nodes[dest_mac];
-    nt->receive_frame(src_mac, packet);
+
+    NodeThread* src_nt = nodes[src_mac];
+    NodeThread* dest_nt = nodes[dest_mac];
+
+    // src_nt->send_recv_mt must be locked at this point
+    src_nt->send_recv_mt.unlock();
+    dest_nt->receive_frame(src_mac, packet);
+    src_nt->send_recv_mt.lock();
 }
 
 Simulation::Simulation(bool log_enabled, std::istream& i)
