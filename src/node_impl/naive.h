@@ -13,7 +13,7 @@ public:
 
     void send_segment(IPAddress dest_ip, std::vector<uint8_t> const& segment) const override
     {
-        log("Sending segment");
+        log("Sending segment:\t" + std::string(segment.begin(), segment.end()));
         MACAddress dest_mac = dest_ip / 1000;
 
         std::vector<uint8_t> packet(sizeof(dest_ip) + segment.size());
@@ -34,7 +34,7 @@ public:
         }
 
         std::vector<uint8_t> segment(packet.begin() + sizeof(dest_ip), packet.end());
-        log("Received packet:\t" + std::string(segment.begin(), segment.end()));
+        log("Received segment:\t" + std::string(segment.begin(), segment.end()));
     }
 };
 

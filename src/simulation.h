@@ -9,7 +9,7 @@
 #include <set>
 #include <vector>
 
-class NodeThread;
+class NodeWork;
 
 struct Simulation {
 private:
@@ -19,7 +19,7 @@ private:
     std::map<MACAddress, std::ostream*> log_streams;
 
 public:
-    std::map<MACAddress, NodeThread*> nodes;
+    std::map<MACAddress, NodeWork*> nodes;
     std::map<MACAddress, std::set<MACAddress>> network_graph;
 
     Simulation(bool log_enabled, std::istream& i);
