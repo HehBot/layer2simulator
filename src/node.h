@@ -2,6 +2,7 @@
 #define NODE_H
 
 #include <cstdint>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -12,14 +13,16 @@ using IPAddress = uint32_t;
 
 class Node {
 private:
-    Simulation& simul;
+    Simulation const& simul;
 
 public:
     virtual ~Node() = default;
 
     MACAddress const mac;
     IPAddress const ip;
-    Node(Simulation& simul, MACAddress mac, IPAddress ip) : simul(simul), mac(mac), ip(ip) { }
+    std::map<MACAddress, size_t> const neighbour_distances;
+    Node(Simulation const& simul, MACAddress mac, IPAddress ip, std::map<MACAddress, size_t> nd)
+        : simul(simul), mac(mac), ip(ip), neighbour_distances(nd) { }
 
     // XXX implement these
     virtual void send_segment(IPAddress dest_ip, std::vector<uint8_t> const& segment) const = 0;

@@ -9,7 +9,7 @@
 // DON'T DO THIS, this is just illustrative of how to extend the Node class
 class NaiveNode : public Node {
 public:
-    NaiveNode(Simulation& simul, MACAddress mac, IPAddress ip) : Node(simul, mac, ip) { }
+    NaiveNode(Simulation& simul, MACAddress mac, IPAddress ip, std::map<MACAddress, size_t> nd) : Node(simul, mac, ip, nd) { }
 
     void send_segment(IPAddress dest_ip, std::vector<uint8_t> const& segment) const override
     {

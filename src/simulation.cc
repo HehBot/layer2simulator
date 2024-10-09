@@ -2,6 +2,7 @@
 #include "node_work.h"
 #include "simulation.h"
 
+#include <algorithm>
 #include <cassert>
 #include <chrono>
 #include <iostream>
@@ -24,16 +25,16 @@ void Simulation::run()
     for (auto const& g : nodes)
         g.second->run();
 }
-void Simulation::send_packet(MACAddress src_mac, MACAddress dest_mac, std::vector<uint8_t> const& packet)
+void Simulation::send_packet(MACAddress src_mac, MACAddress dest_mac, std::vector<uint8_t> const& packet) const
 {
     assert(nodes.count(src_mac) > 0);
     if (nodes.count(dest_mac) == 0)
         throw std::invalid_argument(std::to_string(dest_mac) + " is not a valid MAC address");
-    if (network_graph[src_mac].count(dest_mac) == 0)
+    if (network_graph.count(std::minmax(src_mac, dest_mac)) == 0)
         throw std::invalid_argument(std::to_string(dest_mac) + " is not a MAC address of any neighbour of " + std::to_string(src_mac));
 
-    NodeWork* src_nt = nodes[src_mac];
-    NodeWork* dest_nt = nodes[dest_mac];
+    NodeWork* src_nt = nodes.at(src_mac);
+    NodeWork* dest_nt = nodes.at(dest_mac);
 
     // src_nt->send_recv_mt must be locked at this point
     src_nt->send_recv_mt.unlock();

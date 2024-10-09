@@ -5,7 +5,16 @@
         {
             "mac": 1,
             "ip": 1000,
-            "neighbours": [2,3],
+            "neighbours": [
+                {
+                    "mac": 2,
+                    "distance": 3
+                },
+                {
+                    "mac": 3,
+                    "distance": 4
+                }
+            ],
             "segments_to_send": [
                 {
                     "dest_ip": 2000,
@@ -20,7 +29,16 @@
         {
             "mac": 2,
             "ip": 2000,
-            "neighbours": [3,1],
+            "neighbours": [
+                {
+                    "mac": 3,
+                    "distance": 5
+                },
+                {
+                    "mac": 1,
+                    "distance": 3
+                }
+            ],
             "segments_to_send": [
                 {
                     "dest_ip": 3000,
@@ -35,7 +53,16 @@
         {
             "mac": 3,
             "ip": 3000,
-            "neighbours": [1,2],
+            "neighbours": [
+                {
+                    "mac": 1,
+                    "distance": 4
+                },
+                {
+                    "mac": 2,
+                    "distance": 5
+                }
+            ],
             "segments_to_send": [
                 {
                     "dest_ip": 1000,

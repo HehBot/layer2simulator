@@ -56,6 +56,7 @@ Simulation::Simulation(bool log_enabled, std::istream& i)
 
     std::map<MACAddress, IPAddress> ips;
     std::map<MACAddress, std::vector<NodeWork::SegmentToSendInfo>> segments_to_send_info;
+    std::map<MACAddress, std::map<MACAddress, size_t>> neighbour_info;
 
     for (auto const& node_json : ni_json) {
         if (!node_json.contains("mac"))
@@ -64,7 +65,7 @@ Simulation::Simulation(bool log_enabled, std::istream& i)
         if (!mac_json.is_number_integer())
             throw std::invalid_argument("Bad network file: Invalid node, 'mac' should be an integer");
         MACAddress mac(mac_json);
-        if (network_graph.count(mac) > 0)
+        if (ips.count(mac) > 0)
             throw std::invalid_argument("Bad network file: Invalid node, 'mac' repeated across nodes");
 
         if (!node_json.contains("ip"))
@@ -79,15 +80,31 @@ Simulation::Simulation(bool log_enabled, std::istream& i)
         auto const& neighbours_json = node_json["neighbours"];
         if (!neighbours_json.is_array())
             throw std::invalid_argument("Bad network file: Invalid node, 'neighbours' should be an array");
-        std::set<MACAddress> neighbours;
-        for (auto const& neighbour_mac_json : neighbours_json) {
+
+        std::map<MACAddress, size_t> ni;
+        for (auto const& neighbour_json : neighbours_json) {
+            if (!neighbour_json.contains("mac"))
+                throw std::invalid_argument("Bad network file: Invalid node, each entry of 'neighbours' should contain 'mac'");
+            auto const& neighbour_mac_json = neighbour_json["mac"];
             if (!neighbour_mac_json.is_number_integer())
-                throw std::invalid_argument("Bad network file: Invalid node, each entry of 'neighbour' should be an integer");
-            neighbours.insert(MACAddress(neighbour_mac_json));
+                throw std::invalid_argument("Bad network file: Invalid node, each entry of 'neighbours' should have 'mac' field as integer");
+            MACAddress neighbour_mac(neighbour_mac_json);
+            if (!neighbour_json.contains("distance"))
+                throw std::invalid_argument("Bad network file: Invalid node, each entry of 'neighbours' should contain 'distance'");
+            auto const& neighbour_distance_json = neighbour_json["distance"];
+            if (!neighbour_distance_json.is_number_integer())
+                throw std::invalid_argument("Bad network file: Invalid node, each entry of 'neighbours' should have 'distance' field as integer");
+            size_t neighbour_distance(neighbour_distance_json);
+
+            auto const& it = network_graph.find(std::minmax(mac, neighbour_mac));
+            if (it != network_graph.end() && it->second != neighbour_distance)
+                throw std::invalid_argument("Bad network file: Invalid node, inconsistent distances");
+            else
+                network_graph[std::minmax(mac, neighbour_mac)] = neighbour_distance;
+
+            ni[neighbour_mac] = neighbour_distance;
         }
-        if (neighbours.count(mac) > 0)
-            throw std::invalid_argument("Bad network file: Invalid node, cannot be its own neighbour");
-        network_graph[mac] = neighbours;
+        neighbour_info[mac] = ni;
 
         if (!node_json.contains("segments_to_send"))
             throw std::invalid_argument("Bad network file: Invalid node, no 'segments_to_send' specified");
@@ -100,14 +117,17 @@ Simulation::Simulation(bool log_enabled, std::istream& i)
         segments_to_send_info[mac] = v;
     }
     for (auto const& adj : network_graph) {
-        for (auto const& neighbour : adj.second)
-            if (ips.count(neighbour) == 0)
-                throw std::invalid_argument("Bad network file: Invalid neighbour, not a MAC address of a node");
+        if (ips.count(adj.first.first) == 0)
+            throw std::invalid_argument("Bad network file: Invalid neighbour '" + std::to_string(adj.first.first) + "', not a MAC address of a node");
+        if (ips.count(adj.first.second) == 0)
+            throw std::invalid_argument("Bad network file: Invalid neighbour '" + std::to_string(adj.first.second) + "', not a MAC address of a node");
+    }
+    for (auto const& adj : ips) {
         MACAddress mac = adj.first;
         Node* node;
         switch (node_type) {
         case NT::NAIVE:
-            node = new NaiveNode(*this, mac, ips[mac]);
+            node = new NaiveNode(*this, mac, ips[mac], neighbour_info[mac]);
             break;
         // XXX add others
         default:
