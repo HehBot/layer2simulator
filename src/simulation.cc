@@ -3,7 +3,7 @@
 #include "simulation.h"
 
 #include <cassert>
-#include <ctime>
+#include <chrono>
 #include <iostream>
 #include <map>
 #include <mutex>
@@ -53,9 +53,8 @@ Simulation::~Simulation()
 void Simulation::log(MACAddress mac, IPAddress ip, std::string logline) const
 {
     if (log_enabled) {
-        struct timespec tp;
-        clock_gettime(CLOCK_MONOTONIC, &tp);
-        double dur = 1000 * ((tp.tv_sec + 1e-9 * tp.tv_nsec) - (tp_start.tv_sec + 1e-9 * tp_start.tv_nsec));
+        std::chrono::system_clock::time_point tp = std::chrono::system_clock::now();
+        double dur = std::chrono::duration_cast<std::chrono::microseconds>(tp - tp_start).count() / 1000.0;
         (*log_streams.at(mac)) << "[" << dur << "ms] [MAC:" << mac << ",IP:" << ip << "]\t" << logline << '\n';
     }
 }

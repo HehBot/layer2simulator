@@ -3,7 +3,7 @@
 
 #include "node.h"
 
-#include <ctime>
+#include <chrono>
 #include <iosfwd>
 #include <map>
 #include <set>
@@ -15,7 +15,7 @@ struct Simulation {
 private:
     // for logging
     bool log_enabled;
-    struct timespec tp_start;
+    std::chrono::system_clock::time_point tp_start;
     std::map<MACAddress, std::ostream*> log_streams;
 
 public:

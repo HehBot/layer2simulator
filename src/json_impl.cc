@@ -3,6 +3,7 @@
 #include "node_work.h"
 #include "simulation.h"
 
+#include <chrono>
 #include <fstream>
 
 NodeWork::SegmentToSendInfo::SegmentToSendInfo(nlohmann::json const& segment_to_send_info_json)
@@ -24,10 +25,8 @@ NodeWork::SegmentToSendInfo::SegmentToSendInfo(nlohmann::json const& segment_to_
 }
 
 Simulation::Simulation(bool log_enabled, std::istream& i)
-    : log_enabled(log_enabled)
+    : log_enabled(log_enabled), tp_start(std::chrono::system_clock::now())
 {
-    clock_gettime(CLOCK_MONOTONIC, &tp_start);
-
     auto j = nlohmann::json::parse(i);
     if (!j.contains("node_type"))
         throw std::invalid_argument("Bad network file: No 'node_type' specified");
@@ -121,6 +120,7 @@ Simulation::Simulation(bool log_enabled, std::istream& i)
         for (auto const& g : nodes) {
             MACAddress mac = g.first;
             log_streams[mac] = new std::ofstream(std::string("node-") + std::to_string(mac) + ".log");
+            (*log_streams[mac]) << std::setprecision(2) << std::fixed;
         }
     }
 }
