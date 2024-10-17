@@ -6,24 +6,6 @@
 #include <chrono>
 #include <fstream>
 
-NodeWork::SegmentToSendInfo::SegmentToSendInfo(nlohmann::json const& segment_to_send_info_json)
-{
-    if (!segment_to_send_info_json.contains("dest_ip"))
-        throw std::invalid_argument("Bad network file, each entry of 'segments_to_send_info' should contain 'dest_ip'");
-    auto const& dest_ip_json = segment_to_send_info_json["dest_ip"];
-    if (!dest_ip_json.is_number_integer())
-        throw std::invalid_argument("Bad network file, each entry of 'segments_to_send_info' should have 'dest_ip' field as integer");
-    dest_ip = IPAddress(dest_ip_json);
-
-    if (!segment_to_send_info_json.contains("segment"))
-        throw std::invalid_argument("Bad network file, each entry of 'segments_to_send_info' should contain 'segment'");
-    auto const& segment_json = segment_to_send_info_json["segment"];
-    if (!segment_json.is_string())
-        throw std::invalid_argument("Bad network file, each entry of 'segments_to_send_info' should have 'segment' field as string");
-    std::string segment_str(segment_json);
-    segment = std::vector<uint8_t>(segment_str.begin(), segment_str.end());
-}
-
 Simulation::Simulation(bool log_enabled, std::istream& i)
     : log_enabled(log_enabled), tp_start(std::chrono::system_clock::now())
 {
@@ -55,7 +37,6 @@ Simulation::Simulation(bool log_enabled, std::istream& i)
         throw std::invalid_argument("Bad network file: Invalid 'network_info', must be an array!");
 
     std::map<MACAddress, IPAddress> ips;
-    std::map<MACAddress, std::vector<NodeWork::SegmentToSendInfo>> segments_to_send_info;
     std::map<MACAddress, std::map<MACAddress, size_t>> neighbour_info;
 
     for (auto const& node_json : ni_json) {
@@ -105,16 +86,6 @@ Simulation::Simulation(bool log_enabled, std::istream& i)
             ni[neighbour_mac] = neighbour_distance;
         }
         neighbour_info[mac] = ni;
-
-        if (!node_json.contains("segments_to_send"))
-            throw std::invalid_argument("Bad network file: Invalid node, no 'segments_to_send' specified");
-        auto const& segments_to_send_json = node_json["segments_to_send"];
-        if (!segments_to_send_json.is_array())
-            throw std::invalid_argument("Bad network file: Invalid node, 'segments_to_send' should be an array");
-        std::vector<NodeWork::SegmentToSendInfo> v;
-        for (auto const& segment_to_send_info_json : segments_to_send_json)
-            v.push_back(NodeWork::SegmentToSendInfo(segment_to_send_info_json));
-        segments_to_send_info[mac] = v;
     }
     for (auto const& adj : network_graph) {
         if (ips.count(adj.first.first) == 0)
@@ -122,6 +93,7 @@ Simulation::Simulation(bool log_enabled, std::istream& i)
         if (ips.count(adj.first.second) == 0)
             throw std::invalid_argument("Bad network file: Invalid neighbour '" + std::to_string(adj.first.second) + "', not a MAC address of a node");
     }
+
     for (auto const& adj : ips) {
         MACAddress mac = adj.first;
         Node* node;
@@ -133,14 +105,11 @@ Simulation::Simulation(bool log_enabled, std::istream& i)
         default:
             __builtin_unreachable();
         }
-        nodes[mac] = new NodeWork(node, segments_to_send_info[mac]);
-    }
-
-    if (log_enabled) {
-        for (auto const& g : nodes) {
-            MACAddress mac = g.first;
-            log_streams[mac] = new std::ofstream(std::string("node-") + std::to_string(mac) + ".log");
-            (*log_streams[mac]) << std::setprecision(2) << std::fixed;
+        std::ostream* log_stream = nullptr;
+        if (log_enabled) {
+            log_stream = new std::ofstream(std::string("node-") + std::to_string(mac) + ".log");
+            (*log_stream) << std::setprecision(2) << std::fixed;
         }
+        nodes[mac] = new NodeWork(node, log_stream);
     }
 }

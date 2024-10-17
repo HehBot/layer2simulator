@@ -36,6 +36,10 @@ public:
         std::vector<uint8_t> segment(packet.begin() + sizeof(dest_ip), packet.end());
         log("Received segment:\t" + std::string(segment.begin(), segment.end()));
     }
+    void do_periodic() override
+    {
+        log("AAAAAAA");
+    }
 };
 
 #endif // NAIVE_H

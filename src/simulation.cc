@@ -5,7 +5,6 @@
 #include <algorithm>
 #include <cassert>
 #include <chrono>
-#include <iostream>
 #include <map>
 #include <mutex>
 #include <stdexcept>
@@ -18,12 +17,23 @@ void Node::send_packet(MACAddress dest_mac, std::vector<uint8_t> const& packet) 
 }
 void Node::log(std::string logline) const
 {
-    simul.log(this->mac, this->ip, logline);
+    simul.log(this->mac, logline);
 }
 void Simulation::run()
 {
+    // placeholder messages
+    for (auto const& g : nodes) {
+        std::vector<NodeWork::SegmentToSendInfo> v {};
+        std::string s = std::to_string(g.second->node->ip) + "->";
+        for (auto const& r : g.second->node->neighbour_distances) {
+            std::string t = s + std::to_string(nodes[r.first]->node->ip);
+            v.emplace_back(nodes[r.first]->node->ip, std::vector<uint8_t>(t.begin(), t.end()));
+        }
+        g.second->send(v);
+    }
+
     for (auto const& g : nodes)
-        g.second->run();
+        g.second->flush_send();
 }
 void Simulation::send_packet(MACAddress src_mac, MACAddress dest_mac, std::vector<uint8_t> const& packet) const
 {
@@ -44,18 +54,15 @@ void Simulation::send_packet(MACAddress src_mac, MACAddress dest_mac, std::vecto
 Simulation::~Simulation()
 {
     for (auto const& g : nodes)
-        g.second->end_send();
-    for (auto const& g : nodes) {
         delete g.second;
-        delete log_streams[g.first];
-    }
 }
 
-void Simulation::log(MACAddress mac, IPAddress ip, std::string logline) const
+void Simulation::log(MACAddress mac, std::string logline) const
 {
     if (log_enabled) {
         std::chrono::system_clock::time_point tp = std::chrono::system_clock::now();
         double dur = std::chrono::duration_cast<std::chrono::microseconds>(tp - tp_start).count() / 1000.0;
-        (*log_streams.at(mac)) << "[" << dur << "ms] [MAC:" << mac << ",IP:" << ip << "]\t" << logline << '\n';
+        std::string rawlogline = std::string("[") + std::to_string(dur) + "ms] " + logline + "\n";
+        nodes.at(mac)->log(rawlogline);
     }
 }

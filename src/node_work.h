@@ -1,12 +1,13 @@
 #ifndef NODE_WORK_H
 #define NODE_WORK_H
 
-#include "nlohmann/json_fwd.hpp"
 #include "node.h"
 
+#include <chrono>
 #include <condition_variable>
 #include <cstdint>
 #include <mutex>
+#include <ostream>
 #include <queue>
 #include <thread>
 
@@ -20,13 +21,12 @@ public:
     struct SegmentToSendInfo {
         IPAddress dest_ip;
         std::vector<uint8_t> segment;
-        SegmentToSendInfo(nlohmann::json const& segment_to_send_info_json);
+        SegmentToSendInfo(IPAddress ip, std::vector<uint8_t> const& segment) : dest_ip(ip), segment(segment) { }
     };
 
-private:
     Node* node;
-    bool has_ended;
 
+private:
     struct PacketReceivedInfo {
         MACAddress src_mac;
         std::vector<uint8_t> packet;
@@ -35,26 +35,38 @@ private:
     };
 
     std::queue<PacketReceivedInfo> inbound;
-    std::vector<SegmentToSendInfo> outbound;
-
     // to synchronise push and pop to `inbound` queue
     std::mutex inbound_mt;
-    std::condition_variable cv;
-
+    std::condition_variable inbound_cv;
     std::thread receive_thread;
-    std::thread send_thread;
-
     void receive_loop();
+    bool recv_on;
+
+    std::vector<SegmentToSendInfo> outbound;
+    // to synchronise push and pop to `outbound` queue
+    std::mutex outbound_mt;
+    std::condition_variable outbound_cv, outbound_empty_cv;
+    std::thread send_thread;
     void send_loop();
 
+    std::chrono::system_clock::time_point last_periodic;
+    std::thread periodic_thread;
+    void periodic_loop();
+
+    bool on;
+
+    std::mutex log_mt;
+    std::ostream* logger;
+
 public:
-    NodeWork(Node* node, std::vector<SegmentToSendInfo> const& outbound)
-        : node(node), has_ended(false), outbound(outbound) { }
+    NodeWork(Node* node, std::ostream* logger);
     ~NodeWork();
-    // TODO interface is hacky but needed for correctness
-    void end_send();
-    void run();
+    void start_recv();
+    void send(std::vector<SegmentToSendInfo> const& outbound);
+    void flush_send();
+    void end_recv();
     void receive_frame(MACAddress src_mac, std::vector<uint8_t> const& packet);
+    void log(std::string logline);
 };
 
 #endif // NODE_WORK_H

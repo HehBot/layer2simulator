@@ -27,6 +27,8 @@ public:
     // XXX implement these
     virtual void send_segment(IPAddress dest_ip, std::vector<uint8_t> const& segment) const = 0;
     virtual void receive_packet(MACAddress src_mac, std::vector<uint8_t> const& packet) = 0;
+    // implement this if you need to
+    virtual void do_periodic() { };
 
 protected:
     // XXX use this in your implementation of send_segment
