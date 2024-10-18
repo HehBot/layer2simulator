@@ -9,7 +9,7 @@
 // DON'T DO THIS, this is just illustrative of how to extend the Node class
 class NaiveNode : public Node {
 public:
-    NaiveNode(Simulation& simul, MACAddress mac, IPAddress ip, std::map<MACAddress, size_t> nd) : Node(simul, mac, ip, nd) { }
+    NaiveNode(Simulation& simul, MACAddress mac, IPAddress ip) : Node(simul, mac, ip) { }
 
     void send_segment(IPAddress dest_ip, std::vector<uint8_t> const& segment) const override
     {
@@ -23,12 +23,14 @@ public:
 
         send_packet(dest_mac, packet);
     }
-    void receive_packet(MACAddress src_mac, std::vector<uint8_t> const& packet) override
+    void receive_packet(MACAddress src_mac, std::vector<uint8_t> const& packet, size_t distance) override
     {
         IPAddress dest_ip;
         memcpy(&dest_ip, &packet[0], sizeof(dest_ip));
 
-        if (dest_ip != ip) {
+        if (dest_ip != ip
+            && dest_ip != 0x444f5242 /* "BROD" -> 0x42524f44 -> 0x444f5242 (LE) */
+        ) {
             log("Packet delivered to wrong node, intended for ip " + std::to_string(dest_ip));
             return;
         }
@@ -39,6 +41,8 @@ public:
     void do_periodic() override
     {
         log("AAAAAAA");
+        std::string s = "BROD SHOUT FROM " + std::to_string(mac);
+        broadcast_packet(std::vector<uint8_t>(s.begin(), s.end()));
     }
 };
 

@@ -2,7 +2,6 @@
 #define NODE_H
 
 #include <cstdint>
-#include <map>
 #include <string>
 #include <vector>
 
@@ -20,19 +19,20 @@ public:
 
     MACAddress const mac;
     IPAddress const ip;
-    std::map<MACAddress, size_t> const neighbour_distances;
-    Node(Simulation const& simul, MACAddress mac, IPAddress ip, std::map<MACAddress, size_t> nd)
-        : simul(simul), mac(mac), ip(ip), neighbour_distances(nd) { }
+    Node(Simulation const& simul, MACAddress mac, IPAddress ip)
+        : simul(simul), mac(mac), ip(ip) { }
 
     // XXX implement these
     virtual void send_segment(IPAddress dest_ip, std::vector<uint8_t> const& segment) const = 0;
-    virtual void receive_packet(MACAddress src_mac, std::vector<uint8_t> const& packet) = 0;
+    virtual void receive_packet(MACAddress src_mac, std::vector<uint8_t> const& packet, size_t distance) = 0;
     // implement this if you need to
     virtual void do_periodic() { };
 
 protected:
     // XXX use this in your implementation of send_segment
     void send_packet(MACAddress dest_mac, std::vector<uint8_t> const& packet) const;
+    // XXX use this to broadcast to all neighbours
+    void broadcast_packet(std::vector<uint8_t> const& packet) const;
     // XXX use this for debugging (writes logs to a file named "node-`mac`.log" )
     void log(std::string) const;
 };

@@ -37,7 +37,7 @@ Simulation::Simulation(bool log_enabled, std::istream& i)
         throw std::invalid_argument("Bad network file: Invalid 'network_info', must be an array!");
 
     std::map<MACAddress, IPAddress> ips;
-    std::map<MACAddress, std::map<MACAddress, size_t>> neighbour_info;
+    std::map<std::pair<MACAddress, MACAddress>, size_t> distances;
 
     for (auto const& node_json : ni_json) {
         if (!node_json.contains("mac"))
@@ -77,17 +77,17 @@ Simulation::Simulation(bool log_enabled, std::istream& i)
                 throw std::invalid_argument("Bad network file: Invalid node, each entry of 'neighbours' should have 'distance' field as integer");
             size_t neighbour_distance(neighbour_distance_json);
 
-            auto const& it = network_graph.find(std::minmax(mac, neighbour_mac));
-            if (it != network_graph.end() && it->second != neighbour_distance)
+            auto const& it = distances.find(std::minmax(mac, neighbour_mac));
+            if (it != distances.end() && it->second != neighbour_distance)
                 throw std::invalid_argument("Bad network file: Invalid node, inconsistent distances");
             else
-                network_graph[std::minmax(mac, neighbour_mac)] = neighbour_distance;
+                distances[std::minmax(mac, neighbour_mac)] = neighbour_distance;
 
             ni[neighbour_mac] = neighbour_distance;
         }
-        neighbour_info[mac] = ni;
+        adj[mac] = ni;
     }
-    for (auto const& adj : network_graph) {
+    for (auto const& adj : distances) {
         if (ips.count(adj.first.first) == 0)
             throw std::invalid_argument("Bad network file: Invalid neighbour '" + std::to_string(adj.first.first) + "', not a MAC address of a node");
         if (ips.count(adj.first.second) == 0)
@@ -99,7 +99,7 @@ Simulation::Simulation(bool log_enabled, std::istream& i)
         Node* node;
         switch (node_type) {
         case NT::NAIVE:
-            node = new NaiveNode(*this, mac, ips[mac], neighbour_info[mac]);
+            node = new NaiveNode(*this, mac, ips[mac]);
             break;
         // XXX add others
         default:
