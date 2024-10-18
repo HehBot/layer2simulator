@@ -129,12 +129,14 @@ Simulation::~Simulation()
         delete g.second;
 }
 
+double Simulation::time_ms() const
+{
+    std::chrono::system_clock::time_point tp = std::chrono::system_clock::now();
+    return std::chrono::duration_cast<std::chrono::microseconds>(tp - tp_start).count() / 1000.0;
+}
+
 void Simulation::log(MACAddress mac, std::string logline) const
 {
-    if (log_enabled) {
-        std::chrono::system_clock::time_point tp = std::chrono::system_clock::now();
-        double dur = std::chrono::duration_cast<std::chrono::microseconds>(tp - tp_start).count() / 1000.0;
-        std::string rawlogline = std::string("[") + std::to_string(dur) + "ms] " + logline + "\n";
-        nodes.at(mac)->log(rawlogline);
-    }
+    if (log_enabled)
+        nodes.at(mac)->log(logline);
 }

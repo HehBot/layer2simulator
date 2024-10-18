@@ -40,7 +40,6 @@ public:
     void receive_packet(MACAddress src_mac, std::vector<uint8_t> const& packet, size_t distance) override
     {
         NaivePacketHeader ph;
-        ;
         memcpy(&ph, &packet[0], sizeof(ph));
 
         if (ph.dest_ip == 0) {
@@ -54,10 +53,10 @@ public:
         std::vector<uint8_t> segment(packet.begin() + sizeof(ph), packet.end());
         receive_segment(ph.src_ip, segment);
     }
-    void do_periodic() override
+    void do_periodic(double ms) override
     {
-        log("Sending broadcast");
-        std::string s = "BROADCAST FROM " + std::to_string(ip);
+        log("Sending broadcast at " + std::to_string(ms));
+        std::string s = "BROADCAST FROM " + std::to_string(ip) + " AT " + std::to_string(ms);
         NaivePacketHeader ph(ip, 0);
         std::vector<uint8_t> packet(sizeof(ph) + s.length());
         memcpy(&packet[0], &ph, sizeof(ph));

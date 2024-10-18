@@ -43,7 +43,7 @@ bool NodeWork::do_receive()
 void NodeWork::do_periodic()
 {
     node_mt.lock();
-    node->do_periodic();
+    node->do_periodic(simul.time_ms());
     node_mt.unlock();
 }
 
@@ -73,5 +73,6 @@ void NodeWork::receive_frame(MACAddress src_mac, std::vector<uint8_t> const& pac
 void NodeWork::log(std::string logline)
 {
     std::unique_lock<std::mutex> ul(log_mt);
-    (*logger) << logline << std::flush;
+    (*logger) << '[' << loglineno++ << "] " << logline << '\n'
+              << std::flush;
 }
