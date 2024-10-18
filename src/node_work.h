@@ -52,6 +52,7 @@ public:
     void do_periodic();
 
     void send(std::vector<SegmentToSendInfo> const& outbound);
+    void send(SegmentToSendInfo outbound);
 
     void receive_frame(MACAddress src_mac, std::vector<uint8_t> const& packet, size_t dist);
     void log(std::string logline);

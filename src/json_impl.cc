@@ -5,11 +5,12 @@
 
 #include <chrono>
 #include <fstream>
+#include <string>
 
-Simulation::Simulation(bool log_enabled, std::istream& i)
-    : log_enabled(log_enabled), tp_start(std::chrono::system_clock::now())
+Simulation::Simulation(bool log_enabled, std::string logfile_prefix, std::istream& net_spec)
+    : log_enabled(log_enabled), logfile_prefix(logfile_prefix), tp_start(std::chrono::system_clock::now())
 {
-    auto j = nlohmann::json::parse(i);
+    auto j = nlohmann::json::parse(net_spec);
     if (!j.contains("node_type"))
         throw std::invalid_argument("Bad network file: No 'node_type' specified");
     if (!j.contains("network_info"))
@@ -30,7 +31,7 @@ Simulation::Simulation(bool log_enabled, std::istream& i)
     if (nt_str == "naive")
         node_type = NT::NAIVE;
     else
-        throw std::invalid_argument(std::string("Bad network file: Invalid 'node_type' '") + nt_str + "'");
+        throw std::invalid_argument(std::string("Bad network file: Invalid 'node_type' value '") + nt_str + "'");
 
     auto const& ni_json = j["network_info"];
     if (!ni_json.is_array())
@@ -96,18 +97,17 @@ Simulation::Simulation(bool log_enabled, std::istream& i)
 
     for (auto const& adj : ips) {
         MACAddress mac = adj.first;
-        Node* node;
+        Node* node = nullptr;
         switch (node_type) {
         case NT::NAIVE:
             node = new NaiveNode(*this, mac, ips[mac]);
             break;
-        // XXX add others
-        default:
-            __builtin_unreachable();
+            // XXX add others
         }
+        assert(node != nullptr);
         std::ostream* log_stream = nullptr;
         if (log_enabled) {
-            log_stream = new std::ofstream(std::string("node-") + std::to_string(mac) + ".log");
+            log_stream = new std::ofstream(logfile_prefix + std::to_string(mac) + ".log");
             (*log_stream) << std::setprecision(2) << std::fixed;
         }
         nodes[mac] = new NodeWork(node, log_stream);

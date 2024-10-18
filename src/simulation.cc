@@ -7,7 +7,6 @@
 #include <map>
 #include <mutex>
 #include <sstream>
-#include <stdexcept>
 #include <string>
 #include <thread>
 #include <vector>
@@ -56,23 +55,28 @@ void Simulation::send_loop(bool& send_flush)
             break;
     }
 }
-void Simulation::run()
+void Simulation::run(std::istream& msgfile)
 {
     bool on = true, recv_flush = false, send_flush = false;
+
     std::thread rt = std::thread(&Simulation::recv_loop, this, std::ref(recv_flush));
+
+    std::string line;
+    while (std::getline(msgfile, line)) {
+        std::stringstream ss(line);
+        MACAddress src_mac;
+        IPAddress dest_ip;
+        ss >> src_mac >> dest_ip;
+        std::string segment;
+        ss >> segment;
+        auto it = nodes.find(src_mac);
+        if (it == nodes.end())
+            throw std::invalid_argument("Bad message file: Invalid node '" + std::to_string(src_mac) + "', not a MAC address of a node");
+        nodes[src_mac]->send(NodeWork::SegmentToSendInfo(dest_ip, std::vector<uint8_t>(segment.begin(), segment.end())));
+    }
+
     std::thread pt = std::thread(&Simulation::periodic_loop, this, std::ref(on));
     std::thread st = std::thread(&Simulation::send_loop, this, std::ref(send_flush));
-
-    // placeholder messages
-    for (auto const& g : nodes) {
-        std::vector<NodeWork::SegmentToSendInfo> v {};
-        std::string s = std::to_string(g.second->node->ip) + "->";
-        for (auto const& r : adj[g.first]) {
-            std::string t = s + std::to_string(r.first * 1000);
-            v.emplace_back(r.first * 1000, std::vector<uint8_t>(t.begin(), t.end()));
-        }
-        g.second->send(v);
-    }
 
     send_flush = true;
     st.join();
@@ -95,10 +99,6 @@ void Simulation::send_packet(MACAddress src_mac, MACAddress dest_mac, std::vecto
     NodeWork* src_nt = nodes.at(src_mac);
     NodeWork* dest_nt = nodes.at(dest_mac);
 
-    std::stringstream ss;
-    ss << std::this_thread::get_id();
-    std::string s = ss.str();
-
     // src_nt->send_recv_mt must be locked at this point
     src_nt->node_mt.unlock();
     dest_nt->receive_frame(src_mac, packet, it->second);
@@ -108,10 +108,6 @@ void Simulation::broadcast_packet(MACAddress src_mac, std::vector<uint8_t> const
 {
     assert(nodes.count(src_mac) > 0);
     NodeWork* src_nt = nodes.at(src_mac);
-
-    std::stringstream ss;
-    ss << std::this_thread::get_id();
-    std::string s = ss.str();
 
     for (auto r : adj.at(src_mac)) {
         src_nt->node_mt.unlock();

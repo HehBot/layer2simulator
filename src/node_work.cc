@@ -58,6 +58,11 @@ void NodeWork::send(std::vector<SegmentToSendInfo> const& o)
     std::unique_lock<std::mutex> ul(outbound_mt);
     outbound.insert(outbound.end(), o.begin(), o.end());
 }
+void NodeWork::send(SegmentToSendInfo o)
+{
+    std::unique_lock<std::mutex> ul(outbound_mt);
+    outbound.push_back(o);
+}
 
 void NodeWork::receive_frame(MACAddress src_mac, std::vector<uint8_t> const& packet, size_t dist)
 {

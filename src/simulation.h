@@ -4,15 +4,14 @@
 #include "node.h"
 
 #include <chrono>
-#include <iosfwd>
 #include <map>
-#include <vector>
 
 class NodeWork;
 
 struct Simulation {
 private:
     bool log_enabled;
+    std::string logfile_prefix;
     std::chrono::system_clock::time_point tp_start;
 
     std::map<MACAddress, NodeWork*> nodes;
@@ -23,8 +22,8 @@ private:
     void send_loop(bool& send_flush);
 
 public:
-    Simulation(bool log_enabled, std::istream& i);
-    void run();
+    Simulation(bool log_enabled, std::string logfile_prefix, std::istream& net_spec);
+    void run(std::istream& msg_file);
     ~Simulation();
 
     void send_packet(MACAddress src_mac, MACAddress dest_mac, std::vector<uint8_t> const& packet) const;
