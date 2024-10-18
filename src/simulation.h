@@ -18,6 +18,10 @@ private:
     std::map<MACAddress, NodeWork*> nodes;
     std::map<MACAddress, std::map<MACAddress, size_t>> adj;
 
+    void recv_loop(bool& recv_flush);
+    void periodic_loop(bool& on);
+    void send_loop(bool& send_flush);
+
 public:
     Simulation(bool log_enabled, std::istream& i);
     void run();
@@ -25,6 +29,7 @@ public:
 
     void send_packet(MACAddress src_mac, MACAddress dest_mac, std::vector<uint8_t> const& packet) const;
     void broadcast_packet(MACAddress src_mac, std::vector<uint8_t> const& packet) const;
+    void verify_received_segment(IPAddress src_ip, MACAddress dest_mac, std::vector<uint8_t> const& segment) const;
     void log(MACAddress, std::string logline) const;
 };
 

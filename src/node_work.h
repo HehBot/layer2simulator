@@ -34,10 +34,8 @@ private:
     std::mutex inbound_mt;
     std::queue<PacketReceivedInfo> inbound;
 
-    std::vector<SegmentToSendInfo> outbound;
     std::mutex outbound_mt;
-
-    bool on;
+    std::vector<SegmentToSendInfo> outbound;
 
     std::mutex log_mt;
     std::ostream* logger;
