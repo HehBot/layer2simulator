@@ -1,6 +1,6 @@
 
 {
-    "node_type": "naive",
+    "node_type": "dvr",
     "network_info": [
         {
             "mac": 1,
