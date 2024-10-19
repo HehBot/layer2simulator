@@ -1,12 +1,12 @@
 #include "nlohmann/json.hpp"
-#include "node_impl/naive.h"
 #include "node_impl/dvr.h"
+#include "node_impl/naive.h"
 #include "node_work.h"
 #include "simulation.h"
 
-#include <iostream>
 #include <chrono>
 #include <fstream>
+#include <iostream>
 #include <string>
 
 Simulation::Simulation(bool log_enabled, std::string logfile_prefix, std::istream& net_spec)
@@ -22,7 +22,7 @@ Simulation::Simulation(bool log_enabled, std::string logfile_prefix, std::istrea
 
     enum class NT {
         NAIVE,
-		DVR
+        DVR
         // XXX add others
     } node_type;
 
@@ -33,8 +33,8 @@ Simulation::Simulation(bool log_enabled, std::string logfile_prefix, std::istrea
     // XXX add others
     if (nt_str == "naive")
         node_type = NT::NAIVE;
-	else if (nt_str == "dvr")
-		node_type = NT::DVR;
+    else if (nt_str == "dvr")
+        node_type = NT::DVR;
     else
         throw std::invalid_argument(std::string("Bad network file: Invalid 'node_type' value '") + nt_str + "'");
 
@@ -115,9 +115,9 @@ Simulation::Simulation(bool log_enabled, std::string logfile_prefix, std::istrea
         case NT::NAIVE:
             node = new NaiveNode(this, mac, ip);
             break;
-		case NT::DVR:
-			node = new DVRNode(*this, mac, ips[mac]);
-			break;
+        case NT::DVR:
+            node = new DVRNode(this, mac, ip);
+            break;
             // XXX add others
         }
         assert(node != nullptr);
