@@ -21,13 +21,8 @@ private:
 
     std::map<std::pair<MACAddress, std::string>, bool> segment_delivered;
 
-    void recv_loop(bool& recv_flush);
-    void periodic_loop(bool& on);
-    void send_loop(bool& send_flush);
-
 public:
     Simulation(bool log_enabled, std::string logfile_prefix, std::istream& net_spec);
-    size_t time_us() const;
     void run(std::istream& msg_file);
     ~Simulation();
 
