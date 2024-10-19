@@ -9,6 +9,8 @@ size_t constexpr MAXLOGLINES = 20000;
 
 bool NodeWork::do_send()
 {
+    if (!is_up)
+        return false;
     std::unique_lock<std::mutex> ul(outbound_mt);
 
     if (outbound.size() == 0)
@@ -26,6 +28,8 @@ bool NodeWork::do_send()
 
 bool NodeWork::do_receive()
 {
+    if (!is_up)
+        return false;
     std::unique_lock<std::mutex> ul(inbound_mt);
 
     if (inbound.size() == 0)
@@ -44,6 +48,8 @@ bool NodeWork::do_receive()
 
 void NodeWork::do_periodic()
 {
+    if (!is_up)
+        return;
     node_mt.lock();
     node->do_periodic(simul.time_us());
     node_mt.unlock();
