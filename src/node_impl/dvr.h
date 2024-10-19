@@ -14,13 +14,17 @@ struct PacketHeader {
     IPAddress source_ip;
     IPAddress dest_ip;
 	size_t ttl;
+	// size_t time;
 };
 
 class DVRNode : public Node {
 private:
     std::unordered_map<IPAddress, size_t> distance_vector;
+	std::unordered_map<IPAddress, size_t> distance_vector_validity;
     std::unordered_map<IPAddress, MACAddress> gateway;
     std::unordered_map<MACAddress, size_t> neighbor_distances;
+	std::unordered_map<MACAddress, IPAddress> neighbor_ips;
+	size_t last_periodic = 0;
 
 public:
     DVRNode(Simulation* simul, MACAddress mac, IPAddress ip) : Node(simul, mac, ip) { }

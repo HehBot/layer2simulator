@@ -4,7 +4,9 @@
 #include <cstring>
 #include <vector>
 
+#define INITIAL_VALIDITY 100000
 #define MAX_TTL 4
+#define TIME_DIFF 1000000
 
 void DVRNode::send_segment(IPAddress dest_ip, std::vector<uint8_t> const& segment) const
 {
@@ -42,6 +44,8 @@ void DVRNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> packet, si
         gateway[neighbor_ip] = neighbor_mac;
         neighbor_distances[neighbor_mac] = distance;
         distance_vector[neighbor_ip] = distance;
+		distance_vector_validity[neighbor_ip] = INITIAL_VALIDITY;
+		neighbor_ips[neighbor_mac] = neighbor_ip;
 
         for (auto it = segment.begin() + sizeof(IPAddress) + sizeof(MACAddress); it != segment.end(); it += sizeof(IPAddress) + sizeof(size_t)) {
             IPAddress ip = *(IPAddress*)(&(*it));
@@ -49,8 +53,11 @@ void DVRNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> packet, si
 
             if (distance_vector.find(ip) == distance_vector.end() || distance_vector[ip] > dist + distance) {
                 distance_vector[ip] = dist + distance;
+				distance_vector_validity[ip] = INITIAL_VALIDITY;
                 gateway[ip] = neighbor_mac;
-            }
+            } else if (gateway[ip] == neighbor_mac) {
+				distance_vector_validity[ip] = INITIAL_VALIDITY;
+			}
         }
 
         return;
@@ -98,6 +105,25 @@ void DVRNode::do_periodic(size_t us)
     memcpy(&packet[sizeof(PacketHeader)], &ip, sizeof(IPAddress));
     memcpy(&packet[sizeof(PacketHeader) + sizeof(IPAddress)], &mac, sizeof(MACAddress));
 
+	std::vector<IPAddress> to_delete_from_distance_vector;
+	for (auto it = distance_vector.begin(); it != distance_vector.end(); it++) {
+		distance_vector_validity[it->first]--;
+		if (distance_vector_validity[it->first] == 0)
+			to_delete_from_distance_vector.push_back(it->first);
+	}
+
+	for (auto ip: to_delete_from_distance_vector) {
+		if (neighbor_ips.find(gateway[ip]) != neighbor_ips.end() && neighbor_ips[gateway[ip]] == ip) {
+			log("Neighbor " + std::to_string(gateway[ip]) + " is down");
+			neighbor_distances.erase(gateway[ip]);
+			neighbor_ips.erase(gateway[ip]);
+		}
+
+		distance_vector.erase(ip);
+		gateway.erase(ip);
+		distance_vector_validity.erase(ip);
+	}
+
     int counter = 0;
     for (auto it = distance_vector.begin(); it != distance_vector.end(); it++) {
         memcpy(&packet[sizeof(PacketHeader) + sizeof(IPAddress) + sizeof(MACAddress) + size * counter], &it->first, sizeof(IPAddress));
@@ -105,7 +131,9 @@ void DVRNode::do_periodic(size_t us)
         counter++;
     }
 
-    // broadcast_packet(packet);
+    broadcast_packet(packet);
+
+	last_periodic = us;
 
     return;
 }

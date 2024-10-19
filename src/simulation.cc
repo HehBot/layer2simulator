@@ -98,7 +98,7 @@ void Simulation::run(std::istream& msgfile)
         std::thread rt = std::thread(&Simulation::recv_loop, this, std::ref(recv_flush));
         std::thread pt = std::thread(&Simulation::periodic_loop, this, std::ref(on));
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
         do {
             std::stringstream ss(line);
