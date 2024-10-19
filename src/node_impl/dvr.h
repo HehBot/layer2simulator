@@ -13,25 +13,23 @@ struct PacketHeader {
     bool is_arp;
     IPAddress source_ip;
     IPAddress dest_ip;
-	size_t ttl;
-	// size_t time;
+    size_t ttl;
 };
 
 class DVRNode : public Node {
 private:
     std::unordered_map<IPAddress, size_t> distance_vector;
-	std::unordered_map<IPAddress, size_t> distance_vector_validity;
+    std::unordered_map<IPAddress, size_t> distance_vector_validity;
     std::unordered_map<IPAddress, MACAddress> gateway;
     std::unordered_map<MACAddress, size_t> neighbor_distances;
-	std::unordered_map<MACAddress, IPAddress> neighbor_ips;
-	size_t last_periodic = 0;
+    std::unordered_map<MACAddress, IPAddress> neighbor_ips;
 
 public:
     DVRNode(Simulation* simul, MACAddress mac, IPAddress ip) : Node(simul, mac, ip) { }
 
     void send_segment(IPAddress dest_ip, std::vector<uint8_t> const& segment) const override;
     void receive_packet(MACAddress src_mac, std::vector<uint8_t> packet, size_t distance) override;
-    void do_periodic(size_t us) override;
+    void do_periodic() override;
 };
 
 #endif
