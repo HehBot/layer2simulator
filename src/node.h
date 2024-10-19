@@ -28,7 +28,7 @@ public:
 
     // implement this if you need to do something periodically (eg heartbeats, ARP etc)
     // you get a timestamp in the argument that represents real time in ms
-    virtual void do_periodic(double ms) { };
+    virtual void do_periodic(size_t us) { };
 
 protected:
     // XXX use this in your implementation of send_segment

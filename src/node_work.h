@@ -16,6 +16,7 @@ public:
     std::mutex node_mt;
     Node* node;
     Simulation& simul;
+    bool is_up;
 
     struct SegmentToSendInfo {
         IPAddress dest_ip;
@@ -44,7 +45,7 @@ private:
 
 public:
     NodeWork(Node* node, std::ostream* logger, Simulation& simul)
-        : node(node), simul(simul), loglineno(1), logger(logger)
+        : node(node), simul(simul), is_up(true), loglineno(1), logger(logger)
     {
     }
     ~NodeWork();

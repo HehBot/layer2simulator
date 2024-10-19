@@ -43,7 +43,7 @@ bool NodeWork::do_receive()
 void NodeWork::do_periodic()
 {
     node_mt.lock();
-    node->do_periodic(simul.time_ms());
+    node->do_periodic(simul.time_us());
     node_mt.unlock();
 }
 

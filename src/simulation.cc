@@ -57,35 +57,68 @@ void Simulation::send_loop(bool& send_flush)
 }
 void Simulation::run(std::istream& msgfile)
 {
-    bool on = true, recv_flush = false, send_flush = false;
-
-    std::thread rt = std::thread(&Simulation::recv_loop, this, std::ref(recv_flush));
-
     std::string line;
-    while (std::getline(msgfile, line)) {
-        std::stringstream ss(line);
-        MACAddress src_mac;
-        IPAddress dest_ip;
-        ss >> src_mac >> dest_ip;
-        std::string segment;
-        ss >> segment;
-        auto it = nodes.find(src_mac);
-        if (it == nodes.end())
-            throw std::invalid_argument("Bad message file: Invalid node '" + std::to_string(src_mac) + "', not a MAC address of a node");
-        nodes[src_mac]->send(NodeWork::SegmentToSendInfo(dest_ip, std::vector<uint8_t>(segment.begin(), segment.end())));
+    bool keep_going = (std::getline(msgfile, line) ? true : false);
+    while (keep_going) {
+        bool on = true, recv_flush = false, send_flush = false;
+
+        std::thread rt = std::thread(&Simulation::recv_loop, this, std::ref(recv_flush));
+        std::thread pt = std::thread(&Simulation::periodic_loop, this, std::ref(on));
+
+        do {
+            std::stringstream ss(line);
+            std::string type;
+            ss >> type;
+            if (type == "MSG") {
+                MACAddress src_mac;
+                IPAddress dest_ip;
+                ss >> src_mac >> dest_ip;
+                std::string segment;
+                std::getline(ss, segment);
+                auto it = nodes.find(src_mac);
+                if (it == nodes.end())
+                    throw std::invalid_argument("Bad message file: Invalid node '" + std::to_string(src_mac) + "', not a MAC address of a node");
+                nodes[src_mac]->send(NodeWork::SegmentToSendInfo(dest_ip, std::vector<uint8_t>(segment.begin(), segment.end())));
+            } else if (type == "UP" || type == "DOWN")
+                break;
+            else
+                throw std::invalid_argument("Bad message file: Unknown type line '" + type + "'");
+        } while ((keep_going = (std::getline(msgfile, line) ? true : false)));
+
+        std::thread st = std::thread(&Simulation::send_loop, this, std::ref(send_flush));
+
+        send_flush = true;
+        st.join();
+        on = false;
+        pt.join();
+        recv_flush = true;
+        rt.join();
+
+        // up/down nodes
+        do {
+            std::stringstream ss(line);
+            std::string type;
+            ss >> type;
+            bool is_up;
+            std::string log_prefix;
+            if (type == "DOWN") {
+                is_up = false;
+                log_prefix = "Bringing down node ";
+            } else if (type == "UP") {
+                is_up = true;
+                log_prefix = "Bringing up node ";
+            } else
+                break;
+            MACAddress mac;
+            while (ss >> mac) {
+                auto it = nodes.find(mac);
+                if (it == nodes.end())
+                    throw std::invalid_argument("Bad message file: Invalid node '" + std::to_string(mac) + "', not a MAC address of a node");
+                std::cout << log_prefix << mac << '\n';
+                it->second->is_up = is_up;
+            }
+        } while ((keep_going = (std::getline(msgfile, line) ? true : false)));
     }
-
-    std::thread pt = std::thread(&Simulation::periodic_loop, this, std::ref(on));
-    std::thread st = std::thread(&Simulation::send_loop, this, std::ref(send_flush));
-
-    send_flush = true;
-    st.join();
-
-    on = false;
-    pt.join();
-
-    recv_flush = true;
-    rt.join();
 }
 void Simulation::send_packet(MACAddress src_mac, MACAddress dest_mac, std::vector<uint8_t> const& packet) const
 {
@@ -98,6 +131,11 @@ void Simulation::send_packet(MACAddress src_mac, MACAddress dest_mac, std::vecto
 
     NodeWork* src_nt = nodes.at(src_mac);
     NodeWork* dest_nt = nodes.at(dest_mac);
+
+    if (!dest_nt->is_up) {
+        std::cout << "Attempted delivery to node " << dest_mac << " which is down\n";
+        return;
+    }
 
     // src_nt->send_recv_mt must be locked at this point
     src_nt->node_mt.unlock();
@@ -129,10 +167,10 @@ Simulation::~Simulation()
         delete g.second;
 }
 
-double Simulation::time_ms() const
+size_t Simulation::time_us() const
 {
     std::chrono::system_clock::time_point tp = std::chrono::system_clock::now();
-    return std::chrono::duration_cast<std::chrono::microseconds>(tp - tp_start).count() / 1000.0;
+    return std::chrono::duration_cast<std::chrono::microseconds>(tp - tp_start).count();
 }
 
 void Simulation::log(MACAddress mac, std::string logline) const
