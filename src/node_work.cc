@@ -75,9 +75,16 @@ void NodeWork::receive_frame(MACAddress src_mac, std::vector<uint8_t> const& pac
 bool NodeWork::log(std::string logline)
 {
     std::unique_lock<std::mutex> ul(log_mt);
-    if (loglineno >= MAXLOGLINES)
+    if (loglineno >= MAXLOGLINES) {
+        delete logger;
+        logger = nullptr;
         return false;
+    }
     (*logger) << '[' << loglineno++ << "] " << logline << '\n'
               << std::flush;
     return true;
+}
+bool NodeWork::log_enabled() const
+{
+    return logger != nullptr;
 }

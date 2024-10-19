@@ -59,6 +59,7 @@ public:
 
     void receive_frame(MACAddress src_mac, std::vector<uint8_t> const& packet, size_t dist);
     bool log(std::string logline);
+    bool log_enabled() const;
 };
 
 #endif // NODE_WORK_H

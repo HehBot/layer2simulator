@@ -5,7 +5,6 @@
 
 #include <chrono>
 #include <map>
-#include <set>
 #include <string>
 
 class NodeWork;
@@ -20,7 +19,7 @@ private:
     std::map<IPAddress, MACAddress> ip_to_mac;
     std::map<MACAddress, std::map<MACAddress, size_t>> adj;
 
-    std::set<std::pair<MACAddress, std::string>> pending_segments;
+    std::map<std::pair<MACAddress, std::string>, bool> segment_delivered;
 
     void recv_loop(bool& recv_flush);
     void periodic_loop(bool& on);
