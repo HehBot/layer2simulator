@@ -3,27 +3,29 @@
 #include "simulation.h"
 
 #include <cassert>
-#include <chrono>
 #include <iostream>
 #include <map>
 #include <mutex>
 #include <sstream>
 #include <string>
-#include <thread>
 #include <vector>
 
 enum class LogLevel {
+    DEBUG,
     INFO,
     EVENT,
     WARNING,
     ERROR,
 };
-static void simul_log(LogLevel l, std::string logline)
+void simul_log(LogLevel l, std::string logline)
 {
     static std::mutex stdout_mt;
     stdout_mt.lock();
     std::string ll;
     switch (l) {
+    case LogLevel::DEBUG:
+        ll = "\x1b[34;1m[DEBUG] \x1b[0m";
+        break;
     case LogLevel::INFO:
         ll = "\x1b[34;1m[INFO] \x1b[0m";
         break;
@@ -59,33 +61,6 @@ void Node::log(std::string logline) const
     simul->node_log(this->mac, logline);
 }
 
-void Simulation::recv_loop(bool& recv_flush)
-{
-    while (true) {
-        bool did = false;
-        for (auto g : nodes)
-            did = did || g.second->do_receive();
-        if (!did && recv_flush)
-            break;
-    }
-}
-void Simulation::periodic_loop(bool& on)
-{
-    while (on) {
-        for (auto g : nodes)
-            g.second->do_periodic();
-    }
-}
-void Simulation::send_loop(bool& send_flush)
-{
-    while (true) {
-        bool did = false;
-        for (auto g : nodes)
-            did = did || g.second->do_send();
-        if (!did && send_flush)
-            break;
-    }
-}
 void Simulation::run(std::istream& msgfile)
 {
     std::string line;
@@ -93,12 +68,10 @@ void Simulation::run(std::istream& msgfile)
     while (keep_going) {
         std::cout << std::string(50, '=') << '\n';
 
-        bool on = true, recv_flush = false, send_flush = false;
-
-        std::thread rt = std::thread(&Simulation::recv_loop, this, std::ref(recv_flush));
-        std::thread pt = std::thread(&Simulation::periodic_loop, this, std::ref(on));
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        for (auto g : nodes)
+            g.second->launch_recv();
+        for (auto g : nodes)
+            g.second->launch_periodic();
 
         do {
             std::stringstream ss(line);
@@ -119,21 +92,24 @@ void Simulation::run(std::istream& msgfile)
 
                 segment_delivered[{ it2->second, segment }] = false;
 
-                nodes[src_mac]->send(NodeWork::SegmentToSendInfo(dest_ip, std::vector<uint8_t>(segment.begin(), segment.end())));
+                nodes[src_mac]->add_to_send_segment_queue(NodeWork::SegmentToSendInfo(dest_ip, std::vector<uint8_t>(segment.begin(), segment.end())));
             } else if (type == "UP" || type == "DOWN")
                 break;
             else
                 throw std::invalid_argument("Bad message file: Unknown type line '" + type + "'");
         } while ((keep_going = (std::getline(msgfile, line) ? true : false)));
 
-        std::thread st = std::thread(&Simulation::send_loop, this, std::ref(send_flush));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
-        send_flush = true;
-        st.join();
-        on = false;
-        pt.join();
-        recv_flush = true;
-        rt.join();
+        for (auto g : nodes)
+            g.second->send_segments();
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        for (auto g : nodes)
+            g.second->end_periodic();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        for (auto g : nodes)
+            g.second->end_recv();
 
         std::cout << std::string(50, '=') << '\n';
 
@@ -190,7 +166,6 @@ void Simulation::send_packet(MACAddress src_mac, MACAddress dest_mac, std::vecto
         return;
     }
 
-    NodeWork* src_nt = nodes.at(src_mac);
     NodeWork* dest_nt = nodes.at(dest_mac);
 
     if (!dest_nt->is_up) {
@@ -198,20 +173,15 @@ void Simulation::send_packet(MACAddress src_mac, MACAddress dest_mac, std::vecto
         return;
     }
 
-    // src_nt->send_recv_mt must be locked at this point
-    src_nt->node_mt.unlock();
     dest_nt->receive_frame(src_mac, packet, it->second);
-    src_nt->node_mt.lock();
 }
 void Simulation::broadcast_packet(MACAddress src_mac, std::vector<uint8_t> const& packet) const
 {
     assert(nodes.count(src_mac) > 0);
-    NodeWork* src_nt = nodes.at(src_mac);
 
     for (auto r : adj.at(src_mac)) {
-        src_nt->node_mt.unlock();
-        nodes.at(r.first)->receive_frame(src_mac, packet, r.second);
-        src_nt->node_mt.lock();
+        MACAddress dest_mac = r.first;
+        nodes.at(dest_mac)->receive_frame(src_mac, packet, r.second);
     }
 }
 void Simulation::verify_received_segment(IPAddress src_ip, MACAddress dest_mac, std::vector<uint8_t> const& segment)
@@ -233,12 +203,6 @@ Simulation::~Simulation()
 {
     for (auto const& g : nodes)
         delete g.second;
-}
-
-size_t Simulation::time_us() const
-{
-    std::chrono::system_clock::time_point tp = std::chrono::system_clock::now();
-    return std::chrono::duration_cast<std::chrono::microseconds>(tp - tp_start).count();
 }
 
 void Simulation::node_log(MACAddress mac, std::string logline) const

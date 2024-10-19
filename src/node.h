@@ -26,9 +26,8 @@ public:
     virtual void send_segment(IPAddress dest_ip, std::vector<uint8_t> const& segment) const = 0;
     virtual void receive_packet(MACAddress src_mac, std::vector<uint8_t> packet, size_t distance) = 0;
 
-    // implement this if you need to do something periodically (eg heartbeats, ARP etc)
-    // you get a timestamp in the argument that represents real time in ms
-    virtual void do_periodic(size_t us) { };
+    // implement this if you need to do something periodically
+    virtual void do_periodic() { };
 
 protected:
     // XXX use this in your implementation of send_segment

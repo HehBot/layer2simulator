@@ -53,10 +53,10 @@ public:
         std::vector<uint8_t> segment(packet.begin() + sizeof(ph), packet.end());
         receive_segment(ph.src_ip, segment);
     }
-    void do_periodic(size_t us) override
+    void do_periodic() override
     {
-        log("Sending broadcast at " + std::to_string(us));
-        std::string s = "BROADCAST FROM " + std::to_string(ip) + " AT " + std::to_string(us);
+        log("Sending broadcast");
+        std::string s = "BROADCAST FROM " + std::to_string(ip);
         NaivePacketHeader ph(ip, 0);
         std::vector<uint8_t> packet(sizeof(ph) + s.length());
         memcpy(&packet[0], &ph, sizeof(ph));
