@@ -3,6 +3,7 @@
 #include "simulation.h"
 
 #include <cassert>
+#include <exception>
 #include <iostream>
 #include <map>
 #include <mutex>
@@ -172,17 +173,22 @@ void Simulation::run(std::istream& msgfile)
 void Simulation::send_packet(MACAddress src_mac, MACAddress dest_mac, std::vector<uint8_t> const& packet) const
 {
     assert(nodes.count(src_mac) > 0);
-    if (nodes.count(dest_mac) == 0)
-        throw std::invalid_argument(std::to_string(dest_mac) + " is not a valid MAC address");
+    if (nodes.count(dest_mac) == 0) {
+        simul_log(LogLevel::ERROR, "Attempted to send to MAC address '" + std::to_string(dest_mac) + "' which is not a MAC address of any node");
+        return;
+    }
+
     auto it = adj.at(src_mac).find(dest_mac);
-    if (it == adj.at(src_mac).end())
-        throw std::invalid_argument(std::to_string(dest_mac) + " is not a MAC address of any neighbour of " + std::to_string(src_mac));
+    if (it == adj.at(src_mac).end()) {
+        simul_log(LogLevel::ERROR, "Attempted to send to MAC address '" + std::to_string(dest_mac) + "' which is not a MAC address of any neighbour of (mac:" + std::to_string(src_mac) + ")");
+        return;
+    }
 
     NodeWork* src_nt = nodes.at(src_mac);
     NodeWork* dest_nt = nodes.at(dest_mac);
 
     if (!dest_nt->is_up) {
-        simul_log(LogLevel::ERROR, "Attempted delivery to (mac:" + std::to_string(dest_mac) + ") which is down");
+        simul_log(LogLevel::ERROR, "Attempted to send to (mac:" + std::to_string(dest_mac) + ") which is down");
         return;
     }
 
@@ -227,6 +233,7 @@ size_t Simulation::time_us() const
 
 void Simulation::node_log(MACAddress mac, std::string logline) const
 {
-    if (log_enabled)
-        nodes.at(mac)->log(logline);
+    if (log_enabled && !nodes.at(mac)->log(logline)) {
+        simul_log(LogLevel::WARNING, "Too many logs emitted at (mac:" + std::to_string(mac) + ")");
+    }
 }

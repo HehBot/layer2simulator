@@ -37,7 +37,7 @@ public:
 
         send_packet(dest_mac, packet);
     }
-    void receive_packet(MACAddress src_mac, std::vector<uint8_t> const& packet, size_t distance) override
+    void receive_packet(MACAddress src_mac, std::vector<uint8_t> packet, size_t distance) override
     {
         NaivePacketHeader ph;
         memcpy(&ph, &packet[0], sizeof(ph));

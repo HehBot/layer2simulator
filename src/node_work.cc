@@ -5,6 +5,8 @@
 #include <mutex>
 #include <queue>
 
+size_t constexpr MAXLOGLINES = 20000;
+
 bool NodeWork::do_send()
 {
     std::unique_lock<std::mutex> ul(outbound_mt);
@@ -70,9 +72,12 @@ void NodeWork::receive_frame(MACAddress src_mac, std::vector<uint8_t> const& pac
     inbound.push(PacketReceivedInfo { src_mac, dist, packet });
 }
 
-void NodeWork::log(std::string logline)
+bool NodeWork::log(std::string logline)
 {
     std::unique_lock<std::mutex> ul(log_mt);
+    if (loglineno >= MAXLOGLINES)
+        return false;
     (*logger) << '[' << loglineno++ << "] " << logline << '\n'
               << std::flush;
+    return true;
 }

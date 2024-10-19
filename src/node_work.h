@@ -58,7 +58,7 @@ public:
     void send(SegmentToSendInfo outbound);
 
     void receive_frame(MACAddress src_mac, std::vector<uint8_t> const& packet, size_t dist);
-    void log(std::string logline);
+    bool log(std::string logline);
 };
 
 #endif // NODE_WORK_H
