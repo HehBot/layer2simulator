@@ -48,14 +48,18 @@ Simulation::Simulation(bool log_enabled, std::string logfile_prefix, std::istrea
             throw std::invalid_argument("Bad network file: Invalid node, 'mac' should be an integer");
         MACAddress mac(mac_json);
         if (ips.count(mac) > 0)
-            throw std::invalid_argument("Bad network file: Invalid node, 'mac' repeated across nodes");
+            throw std::invalid_argument("Bad network file: Invalid node, 'mac' should be unique across nodes");
 
         if (!node_json.contains("ip"))
             throw std::invalid_argument("Bad network file: Invalid node, no 'ip' specified");
         auto const& ip_json = node_json["ip"];
         if (!ip_json.is_number_integer())
             throw std::invalid_argument("Bad network file: Invalid node, 'ip' should be an integer");
-        ips[mac] = IPAddress(ip_json);
+        IPAddress ip(ip_json);
+        ips[mac] = ip;
+        if (ip_to_mac.count(ip) > 0)
+            throw std::invalid_argument("Bad network file: Invalid node, 'ip' should be unique across nodes");
+        ip_to_mac[ip] = mac;
 
         if (!node_json.contains("neighbours"))
             throw std::invalid_argument("Bad network file: Invalid node, no 'neighbours' specified");
@@ -94,6 +98,9 @@ Simulation::Simulation(bool log_enabled, std::string logfile_prefix, std::istrea
         if (ips.count(adj.first.second) == 0)
             throw std::invalid_argument("Bad network file: Invalid neighbour '" + std::to_string(adj.first.second) + "', not a MAC address of a node");
     }
+
+    // TODO check that graph is connected
+    // TODO compute width of graph
 
     for (auto const& adj : ips) {
         MACAddress mac = adj.first;

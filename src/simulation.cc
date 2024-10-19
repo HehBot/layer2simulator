@@ -11,6 +11,8 @@
 #include <thread>
 #include <vector>
 
+std::mutex stdout_mt;
+
 void Node::send_packet(MACAddress dest_mac, std::vector<uint8_t> const& packet) const
 {
     simul.send_packet(this->mac, dest_mac, packet);
@@ -21,7 +23,8 @@ void Node::broadcast_packet(std::vector<uint8_t> const& packet) const
 }
 void Node::receive_segment(IPAddress src_ip, std::vector<uint8_t> const& segment) const
 {
-    simul.verify_received_segment(src_ip, this->mac, segment);
+    Simulation const* s = &simul;
+    ((Simulation*)s)->verify_received_segment(src_ip, this->mac, segment);
 }
 void Node::log(std::string logline) const
 {
@@ -78,6 +81,12 @@ void Simulation::run(std::istream& msgfile)
                 auto it = nodes.find(src_mac);
                 if (it == nodes.end())
                     throw std::invalid_argument("Bad message file: Invalid node '" + std::to_string(src_mac) + "', not a MAC address of a node");
+                auto it2 = ip_to_mac.find(dest_ip);
+                if (it2 == ip_to_mac.end())
+                    throw std::invalid_argument("Bad message file: Invalid node '" + std::to_string(src_mac) + "', not a MAC address of a node");
+
+                pending_segments.insert({ it2->second, segment });
+
                 nodes[src_mac]->send(NodeWork::SegmentToSendInfo(dest_ip, std::vector<uint8_t>(segment.begin(), segment.end())));
             } else if (type == "UP" || type == "DOWN")
                 break;
@@ -93,6 +102,15 @@ void Simulation::run(std::istream& msgfile)
         pt.join();
         recv_flush = true;
         rt.join();
+
+        std::cout << std::string(50, '=') << '\n';
+
+        if (pending_segments.size() > 0) {
+            std::cout << "[WARNING] " << pending_segments.size() << " segment(s) not delivered:\n";
+            for (auto i : pending_segments)
+                std::cout << "\tAt (mac:" << i.first << ") with contents:\n\t\t" << i.second << '\n';
+            pending_segments.clear();
+        }
 
         // up/down nodes
         do {
@@ -118,6 +136,8 @@ void Simulation::run(std::istream& msgfile)
                 it->second->is_up = is_up;
             }
         } while ((keep_going = (std::getline(msgfile, line) ? true : false)));
+
+        std::cout << std::string(50, '=') << '\n';
     }
 }
 void Simulation::send_packet(MACAddress src_mac, MACAddress dest_mac, std::vector<uint8_t> const& packet) const
@@ -133,7 +153,9 @@ void Simulation::send_packet(MACAddress src_mac, MACAddress dest_mac, std::vecto
     NodeWork* dest_nt = nodes.at(dest_mac);
 
     if (!dest_nt->is_up) {
-        std::cout << "Attempted delivery to node " << dest_mac << " which is down\n";
+        stdout_mt.lock();
+        std::cout << "[WARNING] Attempted delivery to (mac:" << dest_mac << ") which is down\n";
+        stdout_mt.unlock();
         return;
     }
 
@@ -153,13 +175,18 @@ void Simulation::broadcast_packet(MACAddress src_mac, std::vector<uint8_t> const
         src_nt->node_mt.lock();
     }
 }
-void Simulation::verify_received_segment(IPAddress src_ip, MACAddress dest_mac, std::vector<uint8_t> const& segment) const
+void Simulation::verify_received_segment(IPAddress src_ip, MACAddress dest_mac, std::vector<uint8_t> const& segment)
 {
+    std::string segment_str(segment.begin(), segment.end());
     // TODO add checking here
-    static std::mutex m;
-    m.lock();
-    std::cout << "(mac:" << dest_mac << ") received segment from (ip:" << src_ip << ") with contents:\n\t" << std::string(segment.begin(), segment.end()) << '\n';
-    m.unlock();
+    auto it = pending_segments.find({ dest_mac, segment_str });
+    if (it == pending_segments.end())
+        throw std::runtime_error("Spurious delivery of a segment");
+    pending_segments.erase(it);
+
+    stdout_mt.lock();
+    std::cout << "(mac:" << dest_mac << ") received segment from (ip:" << src_ip << ") with contents:\n\t" << segment_str << '\n';
+    stdout_mt.unlock();
 }
 Simulation::~Simulation()
 {

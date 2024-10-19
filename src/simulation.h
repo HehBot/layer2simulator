@@ -5,6 +5,8 @@
 
 #include <chrono>
 #include <map>
+#include <set>
+#include <string>
 
 class NodeWork;
 
@@ -15,7 +17,10 @@ private:
     std::chrono::system_clock::time_point tp_start;
 
     std::map<MACAddress, NodeWork*> nodes;
+    std::map<IPAddress, MACAddress> ip_to_mac;
     std::map<MACAddress, std::map<MACAddress, size_t>> adj;
+
+    std::set<std::pair<MACAddress, std::string>> pending_segments;
 
     void recv_loop(bool& recv_flush);
     void periodic_loop(bool& on);
@@ -29,7 +34,7 @@ public:
 
     void send_packet(MACAddress src_mac, MACAddress dest_mac, std::vector<uint8_t> const& packet) const;
     void broadcast_packet(MACAddress src_mac, std::vector<uint8_t> const& packet) const;
-    void verify_received_segment(IPAddress src_ip, MACAddress dest_mac, std::vector<uint8_t> const& segment) const;
+    void verify_received_segment(IPAddress src_ip, MACAddress dest_mac, std::vector<uint8_t> const& segment);
     void log(MACAddress, std::string logline) const;
 };
 
