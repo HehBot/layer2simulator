@@ -102,12 +102,13 @@ Simulation::Simulation(bool log_enabled, std::string logfile_prefix, std::istrea
     // TODO check that graph is connected
     // TODO compute width of graph
 
-    for (auto const& adj : ips) {
-        MACAddress mac = adj.first;
+    for (auto const& i : ips) {
+        MACAddress mac = i.first;
+        IPAddress ip = i.second;
         Node* node = nullptr;
         switch (node_type) {
         case NT::NAIVE:
-            node = new NaiveNode(*this, mac, ips[mac]);
+            node = new NaiveNode(this, mac, ip);
             break;
             // XXX add others
         }

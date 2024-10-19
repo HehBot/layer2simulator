@@ -35,7 +35,7 @@ public:
     void send_packet(MACAddress src_mac, MACAddress dest_mac, std::vector<uint8_t> const& packet) const;
     void broadcast_packet(MACAddress src_mac, std::vector<uint8_t> const& packet) const;
     void verify_received_segment(IPAddress src_ip, MACAddress dest_mac, std::vector<uint8_t> const& segment);
-    void log(MACAddress, std::string logline) const;
+    void node_log(MACAddress, std::string logline) const;
 };
 
 #endif // SIMULATION_H

@@ -12,14 +12,14 @@ using IPAddress = uint32_t;
 
 class Node {
 private:
-    Simulation const& simul;
+    Simulation* simul;
 
 public:
     virtual ~Node() = default;
 
     MACAddress const mac;
     IPAddress const ip;
-    Node(Simulation const& simul, MACAddress mac, IPAddress ip)
+    Node(Simulation* simul, MACAddress mac, IPAddress ip)
         : simul(simul), mac(mac), ip(ip) { }
 
     // XXX implement these
