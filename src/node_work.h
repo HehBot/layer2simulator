@@ -15,7 +15,7 @@ public:
     // locking on data structures
     std::mutex node_mt;
     Node* node;
-    Simulation& simul;
+    Simulation const& simul;
     bool is_up;
 
     struct SegmentToSendInfo {

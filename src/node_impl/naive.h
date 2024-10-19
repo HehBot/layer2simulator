@@ -22,7 +22,7 @@ struct NaivePacketHeader {
 //          IP = MAC * 1000
 class NaiveNode : public Node {
 public:
-    NaiveNode(Simulation& simul, MACAddress mac, IPAddress ip) : Node(simul, mac, ip) { }
+    NaiveNode(Simulation* simul, MACAddress mac, IPAddress ip) : Node(simul, mac, ip) { }
 
     void send_segment(IPAddress dest_ip, std::vector<uint8_t> const& segment) const override
     {
