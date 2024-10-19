@@ -72,6 +72,8 @@ Simulation::Simulation(bool log_enabled, std::string logfile_prefix, std::istrea
         if (!neighbours_json.is_array())
             throw std::invalid_argument("Bad network file: Invalid node, 'neighbours' should be an array");
 
+        // TODO check for inconsistency in JSON specified graph
+
         std::map<MACAddress, size_t> ni;
         for (auto const& neighbour_json : neighbours_json) {
             if (!neighbour_json.contains("mac"))

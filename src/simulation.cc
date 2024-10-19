@@ -114,7 +114,7 @@ void Simulation::run(std::istream& msgfile)
                 if (it2 == ip_to_mac.end())
                     throw std::invalid_argument("Bad message file: Invalid node '" + std::to_string(src_mac) + "', not a MAC address of a node");
 
-                pending_segments.insert({ it2->second, segment });
+                segment_delivered[{ it2->second, segment }] = false;
 
                 nodes[src_mac]->send(NodeWork::SegmentToSendInfo(dest_ip, std::vector<uint8_t>(segment.begin(), segment.end())));
             } else if (type == "UP" || type == "DOWN")
@@ -134,14 +134,18 @@ void Simulation::run(std::istream& msgfile)
 
         std::cout << std::string(50, '=') << '\n';
 
-        if (pending_segments.size() > 0) {
-            std::stringstream ss;
-            ss << pending_segments.size() << " segment(s) not delivered:\n";
-            for (auto i : pending_segments)
-                ss << "\tAt (mac:" << i.first << ") with contents:\n\t\t" << i.second << '\n';
-            simul_log(LogLevel::WARNING, ss.str());
-            pending_segments.clear();
+        bool found_undelivered = false;
+        std::stringstream ss;
+        ss << "Some segment(s) not delivered:\n";
+        for (auto i : segment_delivered) {
+            if (!i.second) {
+                found_undelivered = true;
+                ss << "\tAt (mac:" << i.first.first << ") with contents:\n\t\t" << i.first.second << '\n';
+            }
         }
+        if (found_undelivered)
+            simul_log(LogLevel::WARNING, ss.str());
+        segment_delivered.clear();
 
         // up/down nodes
         do {
@@ -172,17 +176,22 @@ void Simulation::run(std::istream& msgfile)
 void Simulation::send_packet(MACAddress src_mac, MACAddress dest_mac, std::vector<uint8_t> const& packet) const
 {
     assert(nodes.count(src_mac) > 0);
-    if (nodes.count(dest_mac) == 0)
-        throw std::invalid_argument(std::to_string(dest_mac) + " is not a valid MAC address");
+    if (nodes.count(dest_mac) == 0) {
+        simul_log(LogLevel::ERROR, "Attempted to send to MAC address '" + std::to_string(dest_mac) + "' which is not a MAC address of any node");
+        return;
+    }
+
     auto it = adj.at(src_mac).find(dest_mac);
-    if (it == adj.at(src_mac).end())
-        throw std::invalid_argument(std::to_string(dest_mac) + " is not a MAC address of any neighbour of " + std::to_string(src_mac));
+    if (it == adj.at(src_mac).end()) {
+        simul_log(LogLevel::ERROR, "Attempted to send to MAC address '" + std::to_string(dest_mac) + "' which is not a MAC address of any neighbour of (mac:" + std::to_string(src_mac) + ")");
+        return;
+    }
 
     NodeWork* src_nt = nodes.at(src_mac);
     NodeWork* dest_nt = nodes.at(dest_mac);
 
     if (!dest_nt->is_up) {
-        simul_log(LogLevel::ERROR, "Attempted delivery to (mac:" + std::to_string(dest_mac) + ") which is down");
+        simul_log(LogLevel::ERROR, "Attempted to send to (mac:" + std::to_string(dest_mac) + ") which is down");
         return;
     }
 
@@ -206,12 +215,16 @@ void Simulation::verify_received_segment(IPAddress src_ip, MACAddress dest_mac, 
 {
     std::string segment_str(segment.begin(), segment.end());
 
-    auto it = pending_segments.find({ dest_mac, segment_str });
-    if (it == pending_segments.end())
-        throw std::runtime_error("Spurious delivery of a segment");
-    pending_segments.erase(it);
-
-    simul_log(LogLevel::EVENT, "(mac:" + std::to_string(dest_mac) + ") received segment from (ip:" + std::to_string(src_ip) + ") with contents:\n\t" + segment_str);
+    auto it = segment_delivered.find({ dest_mac, segment_str });
+    if (it == segment_delivered.end())
+        simul_log(LogLevel::ERROR, "Segment from (ip:" + std::to_string(src_ip) + ") wrongly delivered to (mac:" + std::to_string(dest_mac) + " with contents:\n\t" + segment_str);
+    else {
+        std::string logline = "(mac:" + std::to_string(dest_mac) + ") received segment from (ip:" + std::to_string(src_ip) + ") with contents:\n\t" + segment_str;
+        if (it->second)
+            logline = "{Duplicate delivery} " + logline;
+        it->second = true;
+        simul_log(LogLevel::EVENT, logline);
+    }
 }
 Simulation::~Simulation()
 {
@@ -227,6 +240,7 @@ size_t Simulation::time_us() const
 
 void Simulation::node_log(MACAddress mac, std::string logline) const
 {
-    if (log_enabled)
-        nodes.at(mac)->log(logline);
+    auto p = nodes.at(mac);
+    if (log_enabled && p->log_enabled() && !p->log(logline))
+        simul_log(LogLevel::WARNING, "Too many logs emitted at (mac:" + std::to_string(mac) + "), no more logs will be written");
 }

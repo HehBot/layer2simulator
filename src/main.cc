@@ -16,10 +16,16 @@ int main(int argc, char** argv)
     std::ifstream net_spec(net_spec_name);
     if (!net_spec.is_open()) {
         std::cerr << "Unable to open file '" << net_spec_name << "' for reading\n";
+        std::cerr << "Usage: " << argv[0] << " <json_spec> <msg_file> [--log [logfile_prefix]]\n";
         return 1;
     }
     char const* msg_file_name = argv[2];
     std::ifstream msg_file(msg_file_name);
+    if (!msg_file.is_open()) {
+        std::cerr << "Unable to open file '" << msg_file_name << "' for reading\n";
+        std::cerr << "Usage: " << argv[0] << " <json_spec> <msg_file> [--log [logfile_prefix]]\n";
+        return 1;
+    }
 
     bool log_enabled = (argc >= 4);
     char const* logfile_prefix = (argc == 5 ? argv[4] : "node-");
