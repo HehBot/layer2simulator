@@ -23,6 +23,7 @@ private:
 
 public:
     Simulation(bool log_enabled, std::string logfile_prefix, std::istream& net_spec);
+    size_t time_us() const;
     void run(std::istream& msg_file);
     ~Simulation();
 

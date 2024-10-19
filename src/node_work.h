@@ -15,6 +15,8 @@ public:
     // locking on data structures
     std::mutex node_mt;
     Node* node;
+    Simulation& simul;
+    bool is_up;
 
     struct SegmentToSendInfo {
         IPAddress dest_ip;
@@ -38,11 +40,12 @@ private:
     std::vector<SegmentToSendInfo> outbound;
 
     std::mutex log_mt;
+    size_t loglineno;
     std::ostream* logger;
 
 public:
-    NodeWork(Node* node, std::ostream* logger)
-        : node(node), logger(logger)
+    NodeWork(Node* node, std::ostream* logger, Simulation& simul)
+        : node(node), simul(simul), is_up(true), loglineno(1), logger(logger)
     {
     }
     ~NodeWork();

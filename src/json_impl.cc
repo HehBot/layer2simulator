@@ -118,6 +118,6 @@ Simulation::Simulation(bool log_enabled, std::string logfile_prefix, std::istrea
             log_stream = new std::ofstream(logfile_prefix + std::to_string(mac) + ".log");
             (*log_stream) << std::setprecision(2) << std::fixed;
         }
-        nodes[mac] = new NodeWork(node, log_stream);
+        nodes[mac] = new NodeWork(node, log_stream, *this);
     }
 }
