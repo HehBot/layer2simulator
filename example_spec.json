@@ -1,6 +1,5 @@
-
 {
-    "node_type": "naive",
+    "node_type": "blaster",
     "network_info": [
         {
             "mac": 1,
