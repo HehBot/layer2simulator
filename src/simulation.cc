@@ -90,7 +90,16 @@ void Simulation::run(std::istream& msgfile)
             if (type == "MSG") {
                 MACAddress src_mac;
                 IPAddress dest_ip;
-                ss >> src_mac >> dest_ip;
+                size_t count = 1;
+                std::string next;
+                ss >> next;
+                if (next == "REPE") {
+                    ss >> count;
+                    ss >> src_mac >> dest_ip;
+                } else {
+                    src_mac = std::stoi(next);
+                    ss >> dest_ip;
+                }
                 std::string segment;
                 std::getline(ss, segment);
                 auto it = nodes.find(src_mac);
@@ -100,9 +109,20 @@ void Simulation::run(std::istream& msgfile)
                 if (it2 == ip_to_mac.end())
                     throw std::invalid_argument("Bad message file: Invalid node '" + std::to_string(src_mac) + "', not a MAC address of a node");
 
-                segment_delivered[{ it2->second, segment }] = false;
-
-                nodes[src_mac]->add_to_send_segment_queue(NodeWork::SegmentToSendInfo(dest_ip, std::vector<uint8_t>(segment.begin(), segment.end())));
+                if (count == 1) {
+                    segment_delivered[{ it2->second, segment }] = false;
+                    nodes[src_mac]->add_to_send_segment_queue(NodeWork::SegmentToSendInfo(dest_ip, std::vector<uint8_t>(segment.begin(), segment.end())));
+                } else {
+                    std::vector<NodeWork::SegmentToSendInfo> v;
+                    v.reserve(count);
+                    for (size_t i = 0; i < count; ++i) {
+                        std::string r = segment + "#" + std::to_string(i);
+                        segment_delivered[{ it2->second, r }] = false;
+                        auto s = NodeWork::SegmentToSendInfo(dest_ip, std::vector<uint8_t>(r.begin(), r.end()));
+                        v.push_back(s);
+                    }
+                    nodes[src_mac]->add_to_send_segment_queue(v);
+                }
             } else if (type == "UP" || type == "DOWN")
                 break;
             else
