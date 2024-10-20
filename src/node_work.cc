@@ -72,6 +72,7 @@ void NodeWork::launch_recv()
 {
     if (!recv_on) {
         recv_on = true;
+        inbound = std::queue<PacketReceivedInfo>();
         receive_thread = std::thread(&NodeWork::receive_loop, this);
     }
 }
