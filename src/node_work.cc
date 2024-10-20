@@ -1,6 +1,7 @@
 #include "node_work.h"
 #include "simulation.h"
 
+#include <chrono>
 #include <iostream>
 #include <mutex>
 #include <queue>
@@ -58,6 +59,7 @@ void NodeWork::periodic_loop()
         node_mt.lock();
         node->do_periodic();
         node_mt.unlock();
+        std::this_thread::sleep_for(std::chrono::microseconds(100));
     }
 }
 
