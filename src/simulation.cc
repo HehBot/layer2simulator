@@ -119,7 +119,7 @@ void Simulation::verify_received_segment(IPAddress src_ip, MACAddress dest_mac, 
 void Simulation::node_log(MACAddress mac, std::string logline) const
 {
     auto p = nodes.at(mac);
-    if (node_log_enabled && p->log_enabled() && !p->log(logline))
+    if (node_log_enabled && !p->log(logline))
         log(LogLevel::WARNING, "Too many logs emitted at (mac:" + std::to_string(mac) + "), no more logs will be written");
 }
 
