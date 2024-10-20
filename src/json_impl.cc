@@ -1,4 +1,5 @@
 #include "nlohmann/json.hpp"
+#include "node_impl/blaster.h"
 #include "node_impl/dvr.h"
 #include "node_impl/naive.h"
 #include "node_work.h"
@@ -22,6 +23,7 @@ Simulation::Simulation(bool log_enabled, std::string logfile_prefix, std::istrea
 
     enum class NT {
         NAIVE,
+        BLASTER,
         DVR
         // XXX add others
     } node_type;
@@ -33,6 +35,8 @@ Simulation::Simulation(bool log_enabled, std::string logfile_prefix, std::istrea
     // XXX add others
     if (nt_str == "naive")
         node_type = NT::NAIVE;
+    else if (nt_str == "blaster")
+        node_type = NT::BLASTER;
     else if (nt_str == "dvr")
         node_type = NT::DVR;
     else
@@ -116,6 +120,9 @@ Simulation::Simulation(bool log_enabled, std::string logfile_prefix, std::istrea
         switch (node_type) {
         case NT::NAIVE:
             node = new NaiveNode(this, mac, ip);
+            break;
+        case NT::BLASTER:
+            node = new BlasterNode(this, mac, ip);
             break;
         case NT::DVR:
             node = new DVRNode(this, mac, ip);

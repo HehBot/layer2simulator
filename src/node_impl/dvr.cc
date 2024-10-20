@@ -36,24 +36,19 @@ void DVRNode::send_segment(IPAddress dest_ip, std::vector<uint8_t> const& segmen
 
     MACAddress neighbor_to_send = gateway.at(dest_ip);
 
-    // log("Sending packet to " + std::to_string(dest_ip) + " via " + std::to_string(neighbor_to_send));
     send_packet(neighbor_to_send, packet);
 }
 
-void DVRNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> packet, size_t distance)
+void DVRNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> const& packet, size_t distance)
 {
-    // log("Received packet from " + std::to_string(src_mac) + " with distance " + std::to_string(distance));
     PacketHeader pkt_header;
     memcpy(&pkt_header, &packet[0], sizeof(PacketHeader));
 
     if (pkt_header.is_arp) {
-        // log("Received distance vector from " + std::to_string(src_mac));
         std::vector<uint8_t> segment(packet.begin() + sizeof(PacketHeader), packet.end());
 
         IPAddress neighbor_ip = pkt_header.src_ip;
         MACAddress neighbor_mac = src_mac;
-
-        // log("Received distance vector from " + std::to_string(neighbor_ip) + " with distance " + std::to_string(distance) + " with mac " + std::to_string(neighbor_mac));
 
         gateway[neighbor_ip] = neighbor_mac;
         distance_vector[neighbor_ip] = distance;
@@ -77,19 +72,17 @@ void DVRNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> packet, si
     }
 
     if (pkt_header.dest_ip != ip) {
-        // std::string log_msg = "Received packet with destination " + std::to_string(pkt_header.dest_ip) + " but my IP is " + std::to_string(ip);
-        if (pkt_header.ttl == 0) {
-            // log("Packet TTL expired");
+        if (pkt_header.ttl == 0)
             return;
-        }
 
         IPAddress dest_ip = pkt_header.dest_ip;
         pkt_header.ttl--;
-        memcpy(&packet[0], &pkt_header, sizeof(PacketHeader));
+        std::vector<uint8_t> new_packet(packet);
+        memcpy(&new_packet[0], &pkt_header, sizeof(PacketHeader));
 
         if (distance_vector.find(dest_ip) == distance_vector.end()) {
             // log_msg += " and I don't know how to reach it";
-            broadcast_packet(packet);
+            broadcast_packet(new_packet);
 
             // log(log_msg);
             return;
@@ -97,13 +90,12 @@ void DVRNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> packet, si
 
         // log_msg += " and I know how to reach it and sending it to " + std::to_string(gateway.at(dest_ip));
         MACAddress neighbor_to_send = gateway.at(dest_ip);
-        send_packet(neighbor_to_send, packet);
+        send_packet(neighbor_to_send, new_packet);
         // log(log_msg);
         return;
     }
 
     std::vector<uint8_t> segment(packet.begin() + sizeof(PacketHeader), packet.end());
-    log("Received segment:\t" + std::string(segment.begin(), segment.end()));
     receive_segment(pkt_header.src_ip, segment);
 }
 

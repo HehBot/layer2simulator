@@ -25,16 +25,18 @@ private:
 
     std::map<std::pair<MACAddress, std::string>, bool> segment_delivered;
 
+    std::atomic<size_t> total_nonperiodic_packets_transmitted = 0;
+    std::atomic<size_t> total_nonperiodic_packets_distance = 0;
     std::atomic<size_t> total_packets_transmitted = 0;
-    std::atomic<size_t> total_packet_distance = 0;
+    std::atomic<size_t> total_packets_distance = 0;
 
 public:
     Simulation(bool log_enabled, std::string logfile_prefix, std::istream& net_spec);
     void run(std::istream& msg_file);
     ~Simulation();
 
-    void send_packet(MACAddress src_mac, MACAddress dest_mac, std::vector<uint8_t> const& packet, bool inc);
-    void broadcast_packet(MACAddress src_mac, std::vector<uint8_t> const& packet, bool inc);
+    void send_packet(MACAddress src_mac, MACAddress dest_mac, std::vector<uint8_t> const& packet, bool from_do_periodic);
+    void broadcast_packet(MACAddress src_mac, std::vector<uint8_t> const& packet, bool from_do_periodic);
     void verify_received_segment(IPAddress src_ip, MACAddress dest_mac, std::vector<uint8_t> const& segment);
     void node_log(MACAddress, std::string logline) const;
 };
