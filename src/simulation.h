@@ -6,8 +6,8 @@
 #undef broadcast_packet
 
 #include <atomic>
-#include <chrono>
 #include <map>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 
@@ -16,9 +16,8 @@ class NodeWork;
 struct Simulation {
 private:
     size_t delay_ms;
-    bool log_enabled;
-    std::string logfile_prefix;
-    std::chrono::system_clock::time_point tp_start;
+    bool node_log_enabled;
+    std::string node_log_file_prefix;
 
     std::unordered_map<MACAddress, NodeWork*> nodes;
     std::unordered_map<IPAddress, MACAddress> ip_to_mac;
@@ -30,6 +29,16 @@ private:
     std::atomic<size_t> total_nonperiodic_packets_distance = 0;
     std::atomic<size_t> total_packets_transmitted = 0;
     std::atomic<size_t> total_packets_distance = 0;
+
+    mutable std::mutex log_mt;
+    enum class LogLevel {
+        DEBUG,
+        INFO,
+        EVENT,
+        WARNING,
+        ERROR,
+    };
+    void log(LogLevel l, std::string logline) const;
 
 public:
     Simulation(bool log_enabled, std::string logfile_prefix, std::istream& net_spec, size_t delay_ms);

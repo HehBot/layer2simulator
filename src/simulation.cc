@@ -2,28 +2,22 @@
 #undef send_packet
 #undef broadcast_packet
 
+#include "node_impl/blaster.h"
+#include "node_impl/dvr.h"
+#include "node_impl/naive.h"
 #include "node_work.h"
 #include "simulation.h"
 
-#include <cassert>
+#include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <map>
-#include <mutex>
-#include <sstream>
 #include <string>
 #include <vector>
 
-enum class LogLevel {
-    DEBUG,
-    INFO,
-    EVENT,
-    WARNING,
-    ERROR,
-};
-void simul_log(LogLevel l, std::string logline)
+void Simulation::log(LogLevel l, std::string logline) const
 {
-    static std::mutex stdout_mt;
-    stdout_mt.lock();
+    std::lock_guard<std::mutex> lg(log_mt);
     std::string ll;
     switch (l) {
     case LogLevel::DEBUG:
@@ -44,7 +38,6 @@ void simul_log(LogLevel l, std::string logline)
     }
     std::cout << ll << logline << '\n'
               << std::flush;
-    stdout_mt.unlock();
 }
 
 void Node::send_packet(MACAddress dest_mac, std::vector<uint8_t> const& packet, char const* caller_name) const
@@ -63,135 +56,24 @@ void Node::log(std::string logline) const
 {
     simul->node_log(this->mac, logline);
 }
-
-void Simulation::run(std::istream& msgfile)
-{
-    std::string line;
-    bool keep_going = (std::getline(msgfile, line) ? true : false);
-    while (keep_going) {
-        std::cout << std::string(50, '=') << '\n';
-
-        total_nonperiodic_packets_transmitted = 0;
-        total_nonperiodic_packets_distance = 0;
-        total_packets_transmitted = 0;
-        total_packets_distance = 0;
-
-        for (auto g : nodes)
-            g.second->launch_recv();
-        for (auto g : nodes)
-            g.second->launch_periodic();
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
-
-        do {
-            std::stringstream ss(line);
-            std::string type;
-            ss >> type;
-            if (type == "MSG") {
-                MACAddress src_mac;
-                IPAddress dest_ip;
-                ss >> src_mac >> dest_ip;
-                std::string segment;
-                std::getline(ss, segment);
-                auto it = nodes.find(src_mac);
-                if (it == nodes.end())
-                    throw std::invalid_argument("Bad message file: Invalid node '" + std::to_string(src_mac) + "', not a MAC address of a node");
-                auto it2 = ip_to_mac.find(dest_ip);
-                if (it2 == ip_to_mac.end())
-                    throw std::invalid_argument("Bad message file: Invalid node '" + std::to_string(src_mac) + "', not a MAC address of a node");
-
-                segment_delivered[{ it2->second, segment }] = false;
-
-                nodes[src_mac]->add_to_send_segment_queue(NodeWork::SegmentToSendInfo(dest_ip, std::vector<uint8_t>(segment.begin(), segment.end())));
-            } else if (type == "UP" || type == "DOWN")
-                break;
-            else
-                throw std::invalid_argument("Bad message file: Unknown type line '" + type + "'");
-        } while ((keep_going = (std::getline(msgfile, line) ? true : false)));
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
-
-        for (auto g : nodes)
-            g.second->send_segments();
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
-
-        for (auto g : nodes)
-            g.second->end_periodic();
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
-
-        for (auto g : nodes)
-            g.second->end_recv();
-
-        std::cout << std::string(50, '=') << '\n';
-
-        simul_log(LogLevel::INFO, "Total packets transmitted = " + std::to_string(total_nonperiodic_packets_transmitted));
-        simul_log(LogLevel::INFO, "Total packet distance     = " + std::to_string(total_nonperiodic_packets_distance));
-        double avg_nonperiodic_packet_distance = total_nonperiodic_packets_distance * 1.0 / total_nonperiodic_packets_transmitted;
-        simul_log(LogLevel::INFO, "Average packet distance   = " + std::to_string(avg_nonperiodic_packet_distance));
-        double avg_packet_distance = total_packets_distance * 1.0 / total_packets_transmitted;
-        simul_log(LogLevel::INFO, "Total packets transmitted (incl. periodic) = " + std::to_string(total_packets_transmitted));
-        simul_log(LogLevel::INFO, "Total packet distance     (incl. periodic) = " + std::to_string(total_packets_distance));
-        simul_log(LogLevel::INFO, "Average packet distance   (incl. periodic) = " + std::to_string(avg_packet_distance));
-
-        bool found_undelivered = false;
-        std::stringstream ss;
-        ss << "Some segment(s) not delivered:\n";
-        for (auto i : segment_delivered) {
-            if (!i.second) {
-                found_undelivered = true;
-                ss << "\tAt (mac:" << i.first.first << ") with contents:\n\t\t" << i.first.second << '\n';
-            }
-        }
-        if (found_undelivered)
-            simul_log(LogLevel::WARNING, ss.str());
-        segment_delivered.clear();
-
-        // up/down nodes
-        do {
-            std::stringstream ss(line);
-            std::string type;
-            ss >> type;
-            bool is_up;
-            std::string log_prefix;
-            if (type == "DOWN") {
-                is_up = false;
-                log_prefix = "Bringing down (mac:";
-            } else if (type == "UP") {
-                is_up = true;
-                log_prefix = "Bringing up (mac:";
-            } else
-                break;
-            MACAddress mac;
-            while (ss >> mac) {
-                auto it = nodes.find(mac);
-                if (it == nodes.end())
-                    throw std::invalid_argument("Bad message file: Invalid node '" + std::to_string(mac) + "', not a MAC address of a node");
-                simul_log(LogLevel::INFO, log_prefix + std::to_string(mac) + ")");
-                it->second->is_up = is_up;
-            }
-        } while ((keep_going = (std::getline(msgfile, line) ? true : false)));
-    }
-}
 void Simulation::send_packet(MACAddress src_mac, MACAddress dest_mac, std::vector<uint8_t> const& packet, bool from_do_periodic)
 {
-    assert(nodes.count(src_mac) > 0);
     if (nodes.count(dest_mac) == 0) {
-        simul_log(LogLevel::ERROR, "Attempted to send to MAC address '" + std::to_string(dest_mac) + "' which is not a MAC address of any node");
+        log(LogLevel::ERROR, "Attempted to send to MAC address '" + std::to_string(dest_mac) + "' which is not a MAC address of any node");
         return;
     }
 
-    auto it = adj.at(src_mac).find(dest_mac);
-    if (it == adj.at(src_mac).end()) {
-        simul_log(LogLevel::ERROR, "Attempted to send to MAC address '" + std::to_string(dest_mac) + "' which is not a MAC address of any neighbour of (mac:" + std::to_string(src_mac) + ")");
+    auto const& b = adj[src_mac];
+    auto it = b.find(dest_mac);
+    if (it == b.end()) {
+        log(LogLevel::ERROR, "Attempted to send to MAC address '" + std::to_string(dest_mac) + "' which is not a MAC address of any neighbour of (mac:" + std::to_string(src_mac) + ")");
         return;
     }
 
     NodeWork* dest_nt = nodes.at(dest_mac);
 
     if (!dest_nt->is_up) {
-        simul_log(LogLevel::ERROR, "Attempted to send to (mac:" + std::to_string(dest_mac) + ") which is down");
+        log(LogLevel::ERROR, "Attempted to send to (mac:" + std::to_string(dest_mac) + ") which is down");
         return;
     }
 
@@ -206,8 +88,6 @@ void Simulation::send_packet(MACAddress src_mac, MACAddress dest_mac, std::vecto
 }
 void Simulation::broadcast_packet(MACAddress src_mac, std::vector<uint8_t> const& packet, bool from_do_periodic)
 {
-    assert(nodes.count(src_mac) > 0);
-
     for (auto r : adj.at(src_mac)) {
         MACAddress dest_mac = r.first;
 
@@ -227,24 +107,99 @@ void Simulation::verify_received_segment(IPAddress src_ip, MACAddress dest_mac, 
 
     auto it = segment_delivered.find({ dest_mac, segment_str });
     if (it == segment_delivered.end())
-        simul_log(LogLevel::ERROR, "Segment from (ip:" + std::to_string(src_ip) + ") wrongly delivered to (mac:" + std::to_string(dest_mac) + ") with contents:\n\t" + segment_str);
+        log(LogLevel::ERROR, "Segment from (ip:" + std::to_string(src_ip) + ") wrongly delivered to (mac:" + std::to_string(dest_mac) + ") with contents:\n\t" + segment_str);
     else {
         std::string logline = "(mac:" + std::to_string(dest_mac) + ") received segment from (ip:" + std::to_string(src_ip) + ") with contents:\n\t" + segment_str;
         if (it->second)
             logline = "{Duplicate delivery} " + logline;
         it->second = true;
-        simul_log(LogLevel::EVENT, logline);
+        log(LogLevel::EVENT, logline);
+    }
+}
+
+void Simulation::node_log(MACAddress mac, std::string logline) const
+{
+    auto p = nodes.at(mac);
+    if (node_log_enabled && p->log_enabled() && !p->log(logline))
+        log(LogLevel::WARNING, "Too many logs emitted at (mac:" + std::to_string(mac) + "), no more logs will be written");
+}
+
+Simulation::Simulation(bool node_log_enabled, std::string node_log_file_prefix, std::istream& net_spec, size_t delay_ms)
+    : delay_ms(delay_ms), node_log_enabled(node_log_enabled), node_log_file_prefix(node_log_file_prefix)
+{
+    // XXX add others
+    enum class NT {
+        NAIVE,
+        BLASTER,
+        DVR,
+    } node_type;
+
+    std::string nt_str;
+    net_spec >> nt_str;
+
+    // XXX add others
+    if (nt_str == "naive")
+        node_type = NT::NAIVE;
+    else if (nt_str == "blaster")
+        node_type = NT::BLASTER;
+    else if (nt_str == "dvr")
+        node_type = NT::DVR;
+    else
+        throw std::invalid_argument(std::string("Bad network file: Unknown node type '") + nt_str + "'");
+
+    size_t nr_nodes, nr_edges;
+    net_spec >> nr_nodes;
+    for (size_t i = 0; i < nr_nodes; ++i) {
+        MACAddress mac;
+        IPAddress ip;
+        net_spec >> mac >> ip;
+        if (adj.count(mac) > 0)
+            throw std::invalid_argument(std::string("Bad network file: MAC '") + std::to_string(mac) + "' repeated");
+        if (ip_to_mac.count(ip) > 0)
+            throw std::invalid_argument(std::string("Bad network file: IP '") + std::to_string(ip) + "' repeated");
+        adj[mac] = {};
+        ip_to_mac[ip] = mac;
+    }
+    net_spec >> nr_edges;
+    for (size_t i = 0; i < nr_edges; ++i) {
+        MACAddress m1, m2;
+        size_t distance;
+        net_spec >> m1 >> m2 >> distance;
+        if (adj[m1].count(m2) > 0)
+            throw std::invalid_argument(std::string("Bad network file: Edge between (mac:'") + std::to_string(m1) + "),(mac:" + std::to_string(m2) + ") repeated");
+        adj[m1][m2] = distance;
+        adj[m2][m1] = distance;
+    }
+
+    // TODO check that graph is connected
+    // TODO compute width of graph
+
+    for (auto const& i : ip_to_mac) {
+        IPAddress ip = i.first;
+        MACAddress mac = i.second;
+        Node* node = nullptr;
+        switch (node_type) {
+        case NT::NAIVE:
+            node = new NaiveNode(this, mac, ip);
+            break;
+        case NT::BLASTER:
+            node = new BlasterNode(this, mac, ip);
+            break;
+        case NT::DVR:
+            node = new DVRNode(this, mac, ip);
+            break;
+            // XXX add others
+        }
+        std::ostream* log_stream = nullptr;
+        if (node_log_enabled) {
+            log_stream = new std::ofstream(node_log_file_prefix + std::to_string(mac) + ".log");
+            (*log_stream) << std::setprecision(2) << std::fixed;
+        }
+        nodes[mac] = new NodeWork(node, log_stream);
     }
 }
 Simulation::~Simulation()
 {
     for (auto const& g : nodes)
         delete g.second;
-}
-
-void Simulation::node_log(MACAddress mac, std::string logline) const
-{
-    auto p = nodes.at(mac);
-    if (log_enabled && p->log_enabled() && !p->log(logline))
-        simul_log(LogLevel::WARNING, "Too many logs emitted at (mac:" + std::to_string(mac) + "), no more logs will be written");
 }

@@ -3,17 +3,17 @@
 #include <stdlib.h>
 
 static char const* doc = "layer2simulator - A Layer 2 Network Simulator";
-static char const* args_doc = "NETWORK_SPEC_FILE MSG_FILE";
+static char const* args_doc = "NET_SPEC_FILE MSGS_FILE";
 static struct argp_option options[] = {
-    { "log", 'l', "LOGFILE_PREFIX", OPTION_ARG_OPTIONAL, "Emit nodewise logs" },
-    { "delay", 'd', "DELAY", 0, "Add delay (in ms)" },
+    { "log", 'l', "NODE_LOG_FILE_PREFIX", OPTION_ARG_OPTIONAL, "Emit node-wise logs to file \"{NODE_LOG_FILE_PREFIX}{mac}.log\"\n(default: \"node-\")" },
+    { "delay", 'd', "DELAY", 0, "Add delay in ms (5ms if unspecified)" },
     { 0 }
 };
 
 bool log_enabled = false;
 char const* logfile_prefix = "node-";
 char const* args[2] = { 0 };
-size_t delay_ms = 10;
+size_t delay_ms = 5;
 
 static error_t parse_opt(int key, char* arg, struct argp_state* state)
 {
