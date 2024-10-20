@@ -1,4 +1,7 @@
 #include "node.h"
+#undef send_packet
+#undef broadcast_packet
+
 #include "node_work.h"
 #include "simulation.h"
 
@@ -44,13 +47,13 @@ void simul_log(LogLevel l, std::string logline)
     stdout_mt.unlock();
 }
 
-void Node::send_packet(MACAddress dest_mac, std::vector<uint8_t> const& packet) const
+void Node::send_packet(MACAddress dest_mac, std::vector<uint8_t> const& packet, std::string caller_name) const
 {
-    simul->send_packet(this->mac, dest_mac, packet);
+    simul->send_packet(this->mac, dest_mac, packet, (caller_name == "do_periodic" ? false : true));
 }
-void Node::broadcast_packet(std::vector<uint8_t> const& packet) const
+void Node::broadcast_packet(std::vector<uint8_t> const& packet, std::string caller_name) const
 {
-    simul->broadcast_packet(this->mac, packet);
+    simul->broadcast_packet(this->mac, packet, (caller_name == "do_periodic" ? false : true));
 }
 void Node::receive_segment(IPAddress src_ip, std::vector<uint8_t> const& segment) const
 {
@@ -68,10 +71,15 @@ void Simulation::run(std::istream& msgfile)
     while (keep_going) {
         std::cout << std::string(50, '=') << '\n';
 
+        total_packets_transmitted = 0;
+        total_packet_distance = 0;
+
         for (auto g : nodes)
             g.second->launch_recv();
         for (auto g : nodes)
             g.second->launch_periodic();
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
         do {
             std::stringstream ss(line);
@@ -113,6 +121,9 @@ void Simulation::run(std::istream& msgfile)
 
         std::cout << std::string(50, '=') << '\n';
 
+        simul_log(LogLevel::INFO, "Total packets transmitted = " + std::to_string(total_packets_transmitted));
+        simul_log(LogLevel::INFO, "Total packet distance = " + std::to_string(total_packet_distance));
+
         bool found_undelivered = false;
         std::stringstream ss;
         ss << "Some segment(s) not delivered:\n";
@@ -152,7 +163,7 @@ void Simulation::run(std::istream& msgfile)
         } while ((keep_going = (std::getline(msgfile, line) ? true : false)));
     }
 }
-void Simulation::send_packet(MACAddress src_mac, MACAddress dest_mac, std::vector<uint8_t> const& packet) const
+void Simulation::send_packet(MACAddress src_mac, MACAddress dest_mac, std::vector<uint8_t> const& packet, bool inc)
 {
     assert(nodes.count(src_mac) > 0);
     if (nodes.count(dest_mac) == 0) {
@@ -173,14 +184,22 @@ void Simulation::send_packet(MACAddress src_mac, MACAddress dest_mac, std::vecto
         return;
     }
 
+    if (inc) {
+        total_packets_transmitted++;
+        total_packet_distance += adj[src_mac][dest_mac];
+    }
     dest_nt->receive_frame(src_mac, packet, it->second);
 }
-void Simulation::broadcast_packet(MACAddress src_mac, std::vector<uint8_t> const& packet) const
+void Simulation::broadcast_packet(MACAddress src_mac, std::vector<uint8_t> const& packet, bool inc)
 {
     assert(nodes.count(src_mac) > 0);
 
     for (auto r : adj.at(src_mac)) {
         MACAddress dest_mac = r.first;
+        if (inc) {
+            total_packets_transmitted++;
+            total_packet_distance += adj[src_mac][dest_mac];
+        }
         nodes.at(dest_mac)->receive_frame(src_mac, packet, r.second);
     }
 }

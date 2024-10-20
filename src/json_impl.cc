@@ -42,7 +42,7 @@ Simulation::Simulation(bool log_enabled, std::string logfile_prefix, std::istrea
     if (!ni_json.is_array())
         throw std::invalid_argument("Bad network file: Invalid 'network_info', must be an array!");
 
-    std::map<MACAddress, IPAddress> ips;
+    std::unordered_map<MACAddress, IPAddress> ips;
     std::map<std::pair<MACAddress, MACAddress>, size_t> distances;
 
     for (auto const& node_json : ni_json) {
@@ -74,7 +74,7 @@ Simulation::Simulation(bool log_enabled, std::string logfile_prefix, std::istrea
 
         // TODO check for inconsistency in JSON specified graph
 
-        std::map<MACAddress, size_t> ni;
+        std::unordered_map<MACAddress, size_t> ni;
         for (auto const& neighbour_json : neighbours_json) {
             if (!neighbour_json.contains("mac"))
                 throw std::invalid_argument("Bad network file: Invalid node, each entry of 'neighbours' should contain 'mac'");

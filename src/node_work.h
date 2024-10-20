@@ -2,6 +2,8 @@
 #define NODE_WORK_H
 
 #include "node.h"
+#undef send_packet
+#undef broadcast_packet
 
 #include <condition_variable>
 #include <cstdint>

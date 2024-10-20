@@ -31,17 +31,20 @@ public:
 
 protected:
     // XXX use this in your implementation of send_segment
-    void send_packet(MACAddress dest_mac, std::vector<uint8_t> const& packet) const;
+    void send_packet(MACAddress dest_mac, std::vector<uint8_t> const& packet, std::string metadata) const;
 
     // XXX use this in your implementation of receive_packet when you receive a segment;
     // this will be used to verify that segments are being routed correctly
     void receive_segment(IPAddress src_ip, std::vector<uint8_t> const& segment) const;
 
     // XXX use this to broadcast to all neighbours
-    void broadcast_packet(std::vector<uint8_t> const& packet) const;
+    void broadcast_packet(std::vector<uint8_t> const& packet, std::string metadata) const;
 
     // XXX use this for debugging (writes logs to a file named "node-`mac`.log" )
     void log(std::string) const;
 };
+
+#define send_packet(X, Y) send_packet(X, Y, __func__)
+#define broadcast_packet(X) broadcast_packet(X, __func__)
 
 #endif // NODE_H
