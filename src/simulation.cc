@@ -81,7 +81,7 @@ void Simulation::run(std::istream& msgfile)
         for (auto g : nodes)
             g.second->launch_periodic();
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(250));
+        std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
 
         do {
             std::stringstream ss(line);
@@ -109,15 +109,18 @@ void Simulation::run(std::istream& msgfile)
                 throw std::invalid_argument("Bad message file: Unknown type line '" + type + "'");
         } while ((keep_going = (std::getline(msgfile, line) ? true : false)));
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(250));
+        std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
 
         for (auto g : nodes)
             g.second->send_segments();
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(250));
+        std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
+
         for (auto g : nodes)
             g.second->end_periodic();
-        std::this_thread::sleep_for(std::chrono::milliseconds(250));
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
+
         for (auto g : nodes)
             g.second->end_recv();
 
@@ -224,7 +227,7 @@ void Simulation::verify_received_segment(IPAddress src_ip, MACAddress dest_mac, 
 
     auto it = segment_delivered.find({ dest_mac, segment_str });
     if (it == segment_delivered.end())
-        simul_log(LogLevel::ERROR, "Segment from (ip:" + std::to_string(src_ip) + ") wrongly delivered to (mac:" + std::to_string(dest_mac) + " with contents:\n\t" + segment_str);
+        simul_log(LogLevel::ERROR, "Segment from (ip:" + std::to_string(src_ip) + ") wrongly delivered to (mac:" + std::to_string(dest_mac) + ") with contents:\n\t" + segment_str);
     else {
         std::string logline = "(mac:" + std::to_string(dest_mac) + ") received segment from (ip:" + std::to_string(src_ip) + ") with contents:\n\t" + segment_str;
         if (it->second)
