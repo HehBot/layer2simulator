@@ -13,7 +13,7 @@ static struct argp_option options[] = {
 bool log_enabled = false;
 char const* logfile_prefix = "node-";
 char const* args[2] = { 0 };
-size_t delay_ms = 5;
+size_t delay_ms = 50;
 
 static error_t parse_opt(int key, char* arg, struct argp_state* state)
 {
