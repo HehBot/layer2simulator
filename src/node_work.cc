@@ -49,7 +49,9 @@ void NodeWork::receive_loop()
 
         while (inbound.size() > 0) {
             PacketReceivedInfo const& f = inbound.front();
+            inbound_mt.unlock();
             node->receive_packet(f.src_mac, f.packet, f.dist);
+            inbound_mt.lock();
             inbound.pop();
         }
         inbound_mt.unlock();
