@@ -6,6 +6,8 @@
 #include <queue>
 #include <thread>
 
+static size_t constexpr MAX_NODE_LOG_LINES = 20000;
+
 enum class LogLevel {
     DEBUG,
     INFO,
@@ -14,21 +16,17 @@ enum class LogLevel {
     ERROR,
 };
 void simul_log(LogLevel l, std::string logline);
-size_t constexpr MAXLOGLINES = 20000;
 
-bool NodeWork::send_segments()
+void NodeWork::send_segments()
 {
     if (!is_up)
-        return false;
-
+        return;
     for (auto const& f : outbound) {
         node_mt.lock();
         node->send_segment(f.dest_ip, f.segment);
         node_mt.unlock();
     }
     outbound.clear();
-
-    return true;
 }
 
 void NodeWork::receive_loop()
@@ -36,26 +34,19 @@ void NodeWork::receive_loop()
     if (!is_up)
         return;
     while (true) {
-        node_mt.lock();
-        inbound_mt.lock();
-
-        // inbound_cv.wait(ul, [this]{ return inbound.size() > 0 || !recv_on; });
-
-        if (inbound.size() == 0 && !recv_on) {
-            inbound_mt.unlock();
-            node_mt.unlock();
+        std::unique_lock<std::mutex> ul(inbound_mt);
+        inbound_cv.wait(ul, [this] { return inbound.size() > 0 || !recv_on; });
+        if (inbound.size() == 0 && !recv_on)
             break;
-        }
-
         while (inbound.size() > 0) {
-            PacketReceivedInfo const& f = inbound.front();
-            inbound_mt.unlock();
-            node->receive_packet(f.src_mac, f.packet, f.dist);
-            inbound_mt.lock();
+            PacketReceivedInfo f = inbound.front();
             inbound.pop();
+            ul.unlock();
+            node_mt.lock();
+            node->receive_packet(f.src_mac, f.packet, f.dist);
+            node_mt.unlock();
+            ul.lock();
         }
-        inbound_mt.unlock();
-        node_mt.unlock();
     }
 }
 
@@ -129,10 +120,15 @@ void NodeWork::receive_frame(MACAddress src_mac, std::vector<uint8_t> const& pac
     inbound_cv.notify_one();
 }
 
+/*
+ * returns false when log limit is exceeded for the first time
+ */
 bool NodeWork::log(std::string logline)
 {
     std::unique_lock<std::mutex> ul(log_mt);
-    if (loglineno >= MAXLOGLINES) {
+    if (logger == nullptr)
+        return true;
+    else if (loglineno >= MAX_NODE_LOG_LINES) {
         delete logger;
         logger = nullptr;
         return false;
@@ -140,8 +136,4 @@ bool NodeWork::log(std::string logline)
     (*logger) << '[' << loglineno++ << "] " << logline << '\n'
               << std::flush;
     return true;
-}
-bool NodeWork::log_enabled() const
-{
-    return logger != nullptr;
 }

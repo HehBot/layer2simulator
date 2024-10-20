@@ -66,7 +66,7 @@ void DVRNode::send_segment(IPAddress dest_ip, std::vector<uint8_t> const& segmen
     send_packet_to(dest_ip, packet);
 }
 
-void DVRNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> const& packet, size_t distance)
+void DVRNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> packet, size_t distance)
 {
     PacketHeader pkt_header = PacketHeader::from_bytes(&packet[0]);
 
@@ -132,10 +132,9 @@ void DVRNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> const& pac
             }
             IPAddress dest_ip = pkt_header.dest_ip;
             pkt_header.ttl--;
-            std::vector<uint8_t> new_packet(packet);
-            memcpy(&new_packet[0], &pkt_header, sizeof(PacketHeader));
+            memcpy(&packet[0], &pkt_header, sizeof(PacketHeader));
 
-            send_packet_to(dest_ip, new_packet);
+            send_packet_to(dest_ip, packet);
         }
     }
 }

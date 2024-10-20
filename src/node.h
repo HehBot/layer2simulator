@@ -26,7 +26,7 @@ public:
      * XXX implement these
      */
     virtual void send_segment(IPAddress dest_ip, std::vector<uint8_t> const& segment) const = 0;
-    virtual void receive_packet(MACAddress src_mac, std::vector<uint8_t> const& packet, size_t distance) = 0;
+    virtual void receive_packet(MACAddress src_mac, std::vector<uint8_t> packet, size_t distance) = 0;
 
     /*
      * XXX implement this if you need to do something periodically

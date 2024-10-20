@@ -45,7 +45,7 @@ void NaiveNode::send_segment(IPAddress dest_ip, std::vector<uint8_t> const& segm
 
     send_packet(dest_mac, packet);
 }
-void NaiveNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> const& packet, size_t distance)
+void NaiveNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> packet, size_t distance)
 {
     PacketHeader ph = PacketHeader::from_bytes(&packet[0]);
 

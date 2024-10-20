@@ -40,7 +40,7 @@ void BlasterNode::send_segment(IPAddress dest_ip, std::vector<uint8_t> const& se
 
     broadcast_packet(packet);
 }
-void BlasterNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> const& packet, size_t distance)
+void BlasterNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> packet, size_t distance)
 {
     PacketHeader ph = PacketHeader::from_bytes(&packet[0]);
 
@@ -53,8 +53,7 @@ void BlasterNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> const&
         log("Packet dropped");
     else {
         ph.ttl--;
-        std::vector<uint8_t> new_packet(packet);
-        memcpy(&new_packet[0], &ph, sizeof(ph));
-        broadcast_packet(new_packet);
+        memcpy(&packet[0], &ph, sizeof(ph));
+        broadcast_packet(packet);
     }
 }
