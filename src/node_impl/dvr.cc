@@ -113,7 +113,6 @@ void DVRNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> const& pac
         /*
          * the packet contains a segment payload
          */
-
         if (pkt_header.dest_ip == ip) {
             /*
              * the segment was intended for us
@@ -131,7 +130,6 @@ void DVRNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> const& pac
                  */
                 return;
             }
-
             IPAddress dest_ip = pkt_header.dest_ip;
             pkt_header.ttl--;
             std::vector<uint8_t> new_packet(packet);

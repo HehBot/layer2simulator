@@ -3,33 +3,28 @@
 #include <fstream>
 #include <iostream>
 
+extern "C" bool log_enabled;
+extern "C" char const* logfile_prefix;
+extern "C" char const* args[2];
+extern "C" size_t delay_ms;
+
+extern "C" void parse(int argc, char** argv);
+
 int main(int argc, char** argv)
 {
-    if ((argc < 3)
-        || (argc >= 4 && std::string(argv[3]) != "--log")
-        || (argc > 5)) {
-        std::cerr << "Usage: " << argv[0] << " <json_spec> <msg_file> [--log [logfile_prefix]]\n";
-        return 1;
-    }
+    parse(argc, argv);
 
-    char const* net_spec_name = argv[1];
-    std::ifstream net_spec(net_spec_name);
-    if (!net_spec.is_open()) {
-        std::cerr << "Unable to open file '" << net_spec_name << "' for reading\n";
-        std::cerr << "Usage: " << argv[0] << " <json_spec> <msg_file> [--log [logfile_prefix]]\n";
+    std::ifstream net_spec_file(args[0]);
+    if (!net_spec_file.is_open()) {
+        std::cerr << "Unable to open file '" << args[0] << "' for reading\n";
         return 1;
     }
-    char const* msg_file_name = argv[2];
-    std::ifstream msg_file(msg_file_name);
+    std::ifstream msg_file(args[1]);
     if (!msg_file.is_open()) {
-        std::cerr << "Unable to open file '" << msg_file_name << "' for reading\n";
-        std::cerr << "Usage: " << argv[0] << " <json_spec> <msg_file> [--log [logfile_prefix]]\n";
+        std::cerr << "Unable to open file '" << args[1] << "' for reading\n";
         return 1;
     }
 
-    bool log_enabled = (argc >= 4);
-    char const* logfile_prefix = (argc == 5 ? argv[4] : "node-");
-
-    Simulation s(log_enabled, logfile_prefix, net_spec);
+    Simulation s(log_enabled, logfile_prefix, net_spec_file, delay_ms);
     s.run(msg_file);
 }

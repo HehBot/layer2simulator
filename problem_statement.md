@@ -3,7 +3,7 @@
 In this lab, we would be implementing Network Layer over the Link Layer. We have provided you with the simulator that simulates Link Layer. Your mission, should you choose to accept it, is to implement a **Routing Protocol** with following specifications:
 
 1. Packets should be routed ONLY through shortest path possible
-2. Protocol should be able to detect nodes that have gone down or have come up recently, and should find an alternate shortest path
+2. Protocol should be able to detect nodes that have gone down or have come up recently, and should find an alternate shortest path if necessary
 3. Protocol should be able to converge fairly quickly
 4. In case of shortest path not being found *yet*, protocol should fall back to broadcasting to make sure packet reaches destination
 
@@ -45,7 +45,7 @@ Simulator comes with the Link Layer already implemented. That means, it comes wi
 
 ### `receive_packet`
 #### Declaration
-`void receive_packet(MACAddress src_mac, std::vector<uint8_t> packet, size_t distance)`
+`void receive_packet(MACAddress src_mac, std::vector<uint8_t> const& packet, size_t distance)`
 #### Description
 `receive_packet` is called when node receives a packet from one of its neighbors. `src_mac` is the MAC address of the neighbor from whom node received the packet. `packet` vector is a vector of bytes containing the data of the packet. `distance` is the distance of the neighbor from the current node.
 > Hint: Use `distance` argument for your implementation of Distance Vector Routing
@@ -65,12 +65,27 @@ Simulator comes with the Link Layer already implemented. That means, it comes wi
 
 ## More on protocol specifications
 
-1. Protocol should route the packets through shortest possible path. You need to use the `distance` argument in `receive_packet(...)` function to determine this shortest path. Implementations that route packets through sub-optimal paths will receive a penalty.
+1. Protocol should route the packets through shortest possible path. You need to use the `distance` argument in `receive_packet(...)` function to determine this shortest path. Implementations that route packets through sub-optimal paths will receive a penalty. The simulation will display average distance traversed by packets.
 2. Simulator will make some nodes go down (and then bring them up) arbitrarily. Your protocol should be able to detect that a node has gone down, and then find an alternate shortest path. Similary, if the node comes back up, your protocol should be able to detect that node has become active and if it provides a shorter path, your protocol should make changes accordingly.
 3. In rare cases, if your protocol hasn't yet determined the shortest path (due to not having converged yet), your protocol should fall back to broadcasting the packets. Your protocol should NOT drop packets in any case. In these rare cases, packets may take sub-optimal paths - this is allowed.
-4. Simulator runs `do_periodic` function for a short period of time before the actual transmission of messages start. This period is deliberately provided for your protocol to converge. Your protocol MUST converge in the given time constraints and thereafter use the shortes paths for routing.
-5. After the simulator brings down (or up) a certain node, it again runs `do_periodic` function for short period. Only after this does the actual transmission starts. This time perios is again provided for your protocol to converge (as your protocol will need to find alternate path).
+4. Simulator runs `do_periodic` function for a short period of time (specified in ms by the `delay_ms` command line argument with default value 10) before the actual transmission of messages start. This period is deliberately provided for your protocol to converge. Your protocol MUST converge in the given time constraints and thereafter use the shortes paths for routing.
+5. After the simulator brings down (or up) a certain node, it again runs `do_periodic` function for short period (the aforementioned `delay_ms`). Only after this does the actual transmission starts. This time period is again provided for your protocol to converge (as your protocol will need to find alternate path).
 
 ## Running Instructions
-
+To build the code, we will use GNU Make (please use WSL if you are on Windows, or compile manually if you are pro enough).
+```
+make -j
+```
+This creates an executable `bin/main`. To run the simulation using `spec.json` (containing description of the network) and `msg_file` (containing list of segment to be sent and UP/DOWN instructions)
+```
+./bin/main spec.json msg_file
+```
+To enable nodewise logging (i.e. the `log` function of the `Node` class, refer to src/node_impl/naive.cc for usage)
+```
+./bin/main spec.json msg_file --log
+```
+To run the simulation with the aforementioned `delay_ms` (default 10)
+```
+./bin/main spec.json msg_file --delay_ms 10
+```
 ## Submission Instructions

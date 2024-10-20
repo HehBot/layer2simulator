@@ -15,7 +15,7 @@ OBJS := $(SRCS:%=$(BUILD_DIR)/%.o)
 DEPS := $(OBJS:.o=.d)
 
 CXXFLAGS := -Wall -Wpedantic -Werror -MMD -MP -O3
-CCFLAGS := -Wall -Wpedantic -Werror $(INC_FLAGS) -MMD -MP -O3
+CCFLAGS := -Wall -Wpedantic -Werror -MMD -MP -O3
 LDFLAGS :=
 LIBFLAGS := -lpthread
 

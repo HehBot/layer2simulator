@@ -15,6 +15,7 @@ class NodeWork;
 
 struct Simulation {
 private:
+    size_t delay_ms;
     bool log_enabled;
     std::string logfile_prefix;
     std::chrono::system_clock::time_point tp_start;
@@ -31,7 +32,7 @@ private:
     std::atomic<size_t> total_packets_distance = 0;
 
 public:
-    Simulation(bool log_enabled, std::string logfile_prefix, std::istream& net_spec);
+    Simulation(bool log_enabled, std::string logfile_prefix, std::istream& net_spec, size_t delay_ms);
     void run(std::istream& msg_file);
     ~Simulation();
 

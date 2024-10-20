@@ -10,8 +10,8 @@
 #include <iostream>
 #include <string>
 
-Simulation::Simulation(bool log_enabled, std::string logfile_prefix, std::istream& net_spec)
-    : log_enabled(log_enabled), logfile_prefix(logfile_prefix), tp_start(std::chrono::system_clock::now())
+Simulation::Simulation(bool log_enabled, std::string logfile_prefix, std::istream& net_spec, size_t delay_ms)
+    : delay_ms(delay_ms), log_enabled(log_enabled), logfile_prefix(logfile_prefix), tp_start(std::chrono::system_clock::now())
 {
     auto j = nlohmann::json::parse(net_spec);
     if (!j.contains("node_type"))
