@@ -8,8 +8,10 @@
 #include <atomic>
 #include <map>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <unordered_map>
+#include <utility>
 
 class NodeWork;
 
@@ -25,8 +27,8 @@ private:
 
     std::map<std::pair<MACAddress, std::string>, bool> segment_delivered;
 
-    std::atomic<size_t> total_nonperiodic_packets_transmitted = 0;
-    std::atomic<size_t> total_nonperiodic_packets_distance = 0;
+    std::atomic<size_t> packets_transmitted = 0;
+    std::atomic<size_t> packets_distance = 0;
     std::atomic<size_t> total_packets_transmitted = 0;
     std::atomic<size_t> total_packets_distance = 0;
 
@@ -39,6 +41,8 @@ private:
         ERROR,
     };
     void log(LogLevel l, std::string logline) const;
+
+    std::optional<std::pair<size_t, size_t>> hop_count_with_min_distance(MACAddress m1, MACAddress m2) const;
 
 public:
     Simulation(bool log_enabled, std::string logfile_prefix, std::istream& net_spec, size_t delay_ms);

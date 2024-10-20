@@ -3,8 +3,79 @@
 
 #include <chrono>
 #include <iostream>
+#include <limits>
 #include <sstream>
+#include <stdexcept>
 #include <thread>
+#include <unordered_map>
+#include <unordered_set>
+
+std::optional<std::pair<size_t, size_t>> Simulation::hop_count_with_min_distance(MACAddress m1, MACAddress m2) const
+{
+    /*
+     * computed using Dijkstra
+     */
+    struct Info {
+        MACAddress m;
+        size_t hop_count;
+        size_t distance;
+        bool operator<(Info const& i)
+        {
+            return distance < i.distance;
+        }
+        bool operator==(Info const& i)
+        {
+            return m == i.m && hop_count == i.hop_count && distance == i.distance;
+        }
+    };
+
+    size_t constexpr INFTY = std::numeric_limits<size_t>::max();
+
+    std::unordered_map<MACAddress, size_t> min_distances;
+    std::unordered_map<MACAddress, size_t> hop_counts;
+    std::unordered_set<MACAddress> unvisited;
+    for (auto r : nodes) {
+        min_distances[r.first] = INFTY;
+        hop_counts[r.first] = INFTY;
+        unvisited.insert(r.first);
+    }
+    min_distances[m1] = 0;
+    hop_counts[m1] = 0;
+
+    while (true) {
+        size_t min_dist = INFTY;
+        MACAddress m;
+        for (auto j : unvisited) {
+            if (min_distances[j] < min_dist) {
+                min_dist = min_distances[j];
+                m = j;
+            }
+        }
+        if (min_dist == INFTY)
+            break;
+        if (m == m2)
+            break;
+        unvisited.erase(m);
+        if (!nodes.at(m)->is_up)
+            continue;
+        for (auto r : adj.at(m)) {
+            if (unvisited.count(r.first) > 0) {
+                if (min_distances[r.first] > min_dist + r.second) {
+                    hop_counts[r.first] = hop_counts[m] + 1;
+                    min_distances[r.first] = min_dist + r.second;
+                }
+            }
+        }
+    }
+
+    if (min_distances[m2] == INFTY) {
+        /*
+         * graph is disconnected
+         */
+        return std::optional<std::pair<size_t, size_t>>();
+    } else
+        return std::pair<size_t, size_t> { hop_counts[m2], min_distances[m2] };
+}
 
 void Simulation::run(std::istream& msgfile)
 {
@@ -13,8 +84,8 @@ void Simulation::run(std::istream& msgfile)
     while (keep_going) {
         std::cout << std::string(50, '=') << '\n';
 
-        total_nonperiodic_packets_transmitted = 0;
-        total_nonperiodic_packets_distance = 0;
+        packets_transmitted = 0;
+        packets_distance = 0;
         total_packets_transmitted = 0;
         total_packets_distance = 0;
 
@@ -24,6 +95,9 @@ void Simulation::run(std::istream& msgfile)
             g.second->launch_periodic();
 
         std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
+
+        size_t ideal_packets_transmitted = 0;
+        size_t ideal_packets_distance = 0;
 
         do {
             std::stringstream ss(line);
@@ -44,12 +118,36 @@ void Simulation::run(std::istream& msgfile)
                 }
                 std::string segment;
                 std::getline(ss, segment);
+
+                bool disregard = false;
+
                 auto it = nodes.find(src_mac);
                 if (it == nodes.end())
                     throw std::invalid_argument("Bad message file: Invalid MAC '" + std::to_string(src_mac) + "', not a MAC address of a node");
+                else if (!it->second->is_up) {
+                    log(LogLevel::WARNING, "Node (mac:" + std::to_string(src_mac) + ") is down and cannot send segments");
+                    disregard = true;
+                }
+
                 auto it2 = ip_to_mac.find(dest_ip);
                 if (it2 == ip_to_mac.end())
                     throw std::invalid_argument("Bad message file: Invalid IP '" + std::to_string(dest_ip) + "', not an IP address of a node");
+                else if (!nodes.at(it2->second)->is_up) {
+                    log(LogLevel::WARNING, "Node (mac:" + std::to_string(it2->second) + ") is down and cannot receive segments");
+                    disregard = true;
+                }
+
+                if (src_mac == it2->second)
+                    throw std::invalid_argument("Bad message file: MSG with identical source and destination");
+
+                if (!disregard) {
+                    auto z = hop_count_with_min_distance(src_mac, it2->second);
+                    if (z.has_value()) {
+                        ideal_packets_transmitted += count * z.value().first;
+                        ideal_packets_distance += count * z.value().second;
+                    } else
+                        log(LogLevel::WARNING, "Graph is disconnected, (ip:" + std::to_string(dest_ip) + ") is unreachable from (mac:" + std::to_string(src_mac) + ")");
+                }
 
                 if (count == 1) {
                     segment_delivered[{ it2->second, segment }] = false;
@@ -88,14 +186,19 @@ void Simulation::run(std::istream& msgfile)
 
         std::cout << std::string(50, '=') << '\n';
 
-        log(LogLevel::INFO, "Total packets transmitted = " + std::to_string(total_nonperiodic_packets_transmitted));
-        log(LogLevel::INFO, "Total packet distance     = " + std::to_string(total_nonperiodic_packets_distance));
-        double avg_nonperiodic_packet_distance = total_nonperiodic_packets_distance * 1.0 / total_nonperiodic_packets_transmitted;
+        log(LogLevel::INFO, "Total packets transmitted = " + std::to_string(packets_transmitted));
+        log(LogLevel::INFO, "Total packet distance     = " + std::to_string(packets_distance));
+        double avg_nonperiodic_packet_distance = packets_distance * 1.0 / packets_transmitted;
         log(LogLevel::INFO, "Average packet distance   = " + std::to_string(avg_nonperiodic_packet_distance));
         double avg_packet_distance = total_packets_distance * 1.0 / total_packets_transmitted;
         log(LogLevel::INFO, "Total packets transmitted (incl. periodic) = " + std::to_string(total_packets_transmitted));
         log(LogLevel::INFO, "Total packet distance     (incl. periodic) = " + std::to_string(total_packets_distance));
         log(LogLevel::INFO, "Average packet distance   (incl. periodic) = " + std::to_string(avg_packet_distance));
+
+        if (packets_transmitted != ideal_packets_transmitted)
+            log(LogLevel::ERROR, "Ideal packets transmitted = " + std::to_string(ideal_packets_transmitted));
+        if (packets_distance != ideal_packets_distance)
+            log(LogLevel::ERROR, "Ideal packets distance    = " + std::to_string(ideal_packets_distance));
 
         bool found_undelivered = false;
         std::stringstream ss;
@@ -107,7 +210,7 @@ void Simulation::run(std::istream& msgfile)
             }
         }
         if (found_undelivered)
-            log(LogLevel::WARNING, ss.str());
+            log(LogLevel::ERROR, ss.str());
         segment_delivered.clear();
 
         // up/down nodes
