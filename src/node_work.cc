@@ -9,15 +9,6 @@
 
 static size_t constexpr MAX_NODE_LOG_LINES = 20000;
 
-enum class LogLevel {
-    DEBUG,
-    INFO,
-    EVENT,
-    WARNING,
-    ERROR,
-};
-void simul_log(LogLevel l, std::string logline);
-
 void NodeWork::send_segments()
 {
     if (!is_up) {
