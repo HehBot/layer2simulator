@@ -20,8 +20,10 @@ void simul_log(LogLevel l, std::string logline);
 
 void NodeWork::send_segments()
 {
-    if (!is_up)
+    if (!is_up) {
+        outbound.clear();
         return;
+    }
     for (auto const& f : outbound) {
         node_mt.lock();
         node->send_segment(f.dest_ip, f.segment);
@@ -107,10 +109,14 @@ NodeWork::~NodeWork()
 
 void NodeWork::add_to_send_segment_queue(std::vector<SegmentToSendInfo> const& o)
 {
+    if (!is_up)
+        return;
     outbound.insert(outbound.end(), o.begin(), o.end());
 }
 void NodeWork::add_to_send_segment_queue(SegmentToSendInfo o)
 {
+    if (!is_up)
+        return;
     outbound.push_back(o);
 }
 

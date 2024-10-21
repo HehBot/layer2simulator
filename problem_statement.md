@@ -45,7 +45,7 @@ Simulator comes with the Link Layer already implemented. That means, it comes wi
 
 ### `receive_packet`
 #### Declaration
-`void receive_packet(MACAddress src_mac, std::vector<uint8_t> const& packet, size_t distance)`
+`void receive_packet(MACAddress src_mac, std::vector<uint8_t> packet, size_t distance)`
 #### Description
 `receive_packet` is called when node receives a packet from one of its neighbors. `src_mac` is the MAC address of the neighbor from whom node received the packet. `packet` vector is a vector of bytes containing the data of the packet. `distance` is the distance of the neighbor from the current node.
 > Hint: Use `distance` argument for your implementation of Distance Vector Routing
@@ -59,16 +59,15 @@ Simulator comes with the Link Layer already implemented. That means, it comes wi
 
 ---
 
-- Network topology is specified using a JSON file. You can check out `example_spec.json` to understand its structure.
-
-- Messages that need to be sent are also specified in a file. You can check out `msg_file` to understand its structure. It also contains the instructions to bring down or bring up a specified node (using `DOWN` and `UP`).
+- Network topology is specified in a file (first argument to simulator). You can check out `example_net_spec` to understand its structure.
+- Messages that need to be sent are also specified in a file (second argument to simulator). You can check out `example_msgs` to understand its structure. It also contains the instructions to bring down or bring up specified nodes (using `DOWN` and `UP`).
 
 ## More on protocol specifications
 
 1. Protocol should route the packets through shortest possible path. You need to use the `distance` argument in `receive_packet(...)` function to determine this shortest path. Implementations that route packets through sub-optimal paths will receive a penalty. The simulation will display average distance traversed by packets.
 2. Simulator will make some nodes go down (and then bring them up) arbitrarily. Your protocol should be able to detect that a node has gone down, and then find an alternate shortest path. Similary, if the node comes back up, your protocol should be able to detect that node has become active and if it provides a shorter path, your protocol should make changes accordingly.
 3. In rare cases, if your protocol hasn't yet determined the shortest path (due to not having converged yet), your protocol should fall back to broadcasting the packets. Your protocol should NOT drop packets in any case. In these rare cases, packets may take sub-optimal paths - this is allowed.
-4. Simulator runs `do_periodic` function for a short period of time (specified in ms by the `delay_ms` command line argument with default value 10) before the actual transmission of messages start. This period is deliberately provided for your protocol to converge. Your protocol MUST converge in the given time constraints and thereafter use the shortes paths for routing.
+4. Simulator runs `do_periodic` function for a short period of time (specified in ms by the `delay` command line argument with default value 50) before the actual transmission of messages start. This period is deliberately provided for your protocol to converge. Your protocol MUST converge in the given time constraints and thereafter use the shortes paths for routing.
 5. After the simulator brings down (or up) a certain node, it again runs `do_periodic` function for short period (the aforementioned `delay_ms`). Only after this does the actual transmission starts. This time period is again provided for your protocol to converge (as your protocol will need to find alternate path).
 
 ## Running Instructions
@@ -76,16 +75,16 @@ To build the code, we will use GNU Make (please use WSL if you are on Windows, o
 ```
 make -j
 ```
-This creates an executable `bin/main`. To run the simulation using `spec.json` (containing description of the network) and `msg_file` (containing list of segment to be sent and UP/DOWN instructions)
+This creates an executable `bin/main`. To run the simulation using `net_spec` (containing description of the network) and `msgs` (containing list of segments to be sent and UP/DOWN instructions)
 ```
-./bin/main spec.json msg_file
+./bin/main net_spec msgs
 ```
-To enable nodewise logging (i.e. the `log` function of the `Node` class, refer to src/node_impl/naive.cc for usage)
+To enable nodewise logging (i.e. the `log` function of the `Node` class, refer to `src/node_impl/naive.cc` for usage)
 ```
-./bin/main spec.json msg_file --log
+./bin/main net_spec msgs --log
 ```
 To run the simulation with the aforementioned `delay_ms` (default 10)
 ```
-./bin/main spec.json msg_file --delay_ms 10
+./bin/main net_spec msgs --delay_ms 10
 ```
 ## Submission Instructions

@@ -80,8 +80,8 @@ void Simulation::send_packet(MACAddress src_mac, MACAddress dest_mac, std::vecto
     total_packets_transmitted++;
     total_packets_distance += it->second;
     if (!from_do_periodic) {
-        total_nonperiodic_packets_transmitted++;
-        total_nonperiodic_packets_distance += it->second;
+        packets_transmitted++;
+        packets_distance += it->second;
     }
 
     dest_nt->receive_frame(src_mac, packet, it->second);
@@ -94,8 +94,8 @@ void Simulation::broadcast_packet(MACAddress src_mac, std::vector<uint8_t> const
         total_packets_transmitted++;
         total_packets_distance += r.second;
         if (!from_do_periodic) {
-            total_nonperiodic_packets_transmitted++;
-            total_nonperiodic_packets_distance += r.second;
+            packets_transmitted++;
+            packets_distance += r.second;
         }
 
         nodes.at(dest_mac)->receive_frame(src_mac, packet, r.second);
@@ -171,13 +171,12 @@ Simulation::Simulation(bool node_log_enabled, std::string node_log_file_prefix, 
         adj[m2][m1] = distance;
     }
 
-    // TODO check that graph is connected
-    // TODO compute width of graph
-
     for (auto const& i : ip_to_mac) {
         IPAddress ip = i.first;
         MACAddress mac = i.second;
         Node* node = nullptr;
+
+        // XXX add others
         switch (node_type) {
         case NT::NAIVE:
             node = new NaiveNode(this, mac, ip);
@@ -188,8 +187,8 @@ Simulation::Simulation(bool node_log_enabled, std::string node_log_file_prefix, 
         case NT::DVR:
             node = new DVRNode(this, mac, ip);
             break;
-            // XXX add others
         }
+
         std::ostream* log_stream = nullptr;
         if (node_log_enabled) {
             log_stream = new std::ofstream(node_log_file_prefix + std::to_string(mac) + ".log");

@@ -6,7 +6,7 @@ static char const* doc = "layer2simulator - A Layer 2 Network Simulator";
 static char const* args_doc = "NET_SPEC_FILE MSGS_FILE";
 static struct argp_option options[] = {
     { "log", 'l', "NODE_LOG_FILE_PREFIX", OPTION_ARG_OPTIONAL, "Emit node-wise logs to file \"{NODE_LOG_FILE_PREFIX}{mac}.log\"\n(default: \"node-\")" },
-    { "delay", 'd', "DELAY", 0, "Add delay in ms (5ms if unspecified)" },
+    { "delay", 'd', "DELAY", 0, "Add delay in ms (50ms if unspecified)" },
     { 0 }
 };
 
