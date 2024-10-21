@@ -34,6 +34,7 @@ public:
 
 struct DVEntry {
     IPAddress ip;
+    MACAddress gateway;
     size_t distance;
     size_t validity;
 };
@@ -42,7 +43,7 @@ struct DVEntry {
 void DVRNode::send_packet_to(IPAddress dest_ip, std::vector<uint8_t> const& packet) const
 {
     auto dv_entry = dv_table.find(dest_ip);
-    if (dv_entry == dv_table.end()) {
+    if (dv_entry == dv_table.end() || dv_entry->second.validity == 0) {
         /*
          * if we do not have a route to `dest_ip` we broadcast it
          */
@@ -85,6 +86,18 @@ void DVRNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> packet, si
             IPAddress dest_ip = neighbor_dve.ip;
 
             auto dv_entry = dv_table.find(dest_ip);
+            if (neighbor_dve.gateway == mac) {
+                /*
+                 * disregard proposed routes that go through us (split horizon)
+                 */
+                if (dv_entry != dv_table.end() && dv_entry->second.gateway == neighbor_mac) {
+                    /*
+                     * also invalidate any resulting loop routes
+                     */
+                    dv_entry->second.validity = 0;
+                }
+                continue;
+            }
             if (dv_entry == dv_table.end()
                 || dv_entry->second.distance > neighbor_dve.distance + distance
                 || (dv_entry->second.distance == neighbor_dve.distance + distance
@@ -146,9 +159,9 @@ void DVRNode::do_periodic()
      */
     std::vector<IPAddress> to_delete_from_distance_vector;
     for (auto& dv_entry : dv_table) {
-        dv_entry.second.validity--;
         if (dv_entry.second.validity == 0)
             to_delete_from_distance_vector.push_back(dv_entry.first);
+        dv_entry.second.validity--;
     }
 
     /*
@@ -176,7 +189,7 @@ void DVRNode::do_periodic()
     memcpy(&packet[0], &pkt_header, sizeof(DVRPacketHeader));
     size_t off = sizeof(DVRPacketHeader);
     for (auto dv_entry : dv_table) {
-        DVEntry dve = { dv_entry.first, dv_entry.second.distance, dv_entry.second.validity };
+        DVEntry dve = { dv_entry.first, dv_entry.second.gateway, dv_entry.second.distance, dv_entry.second.validity };
         memcpy(&packet[off], &dve, sizeof(dve));
         off += sizeof(dve);
     }
