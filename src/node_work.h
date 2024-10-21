@@ -71,7 +71,7 @@ public:
     void add_to_send_segment_queue(std::vector<SegmentToSendInfo> const& outbound);
     void add_to_send_segment_queue(SegmentToSendInfo outbound);
 
-    void receive_frame(MACAddress src_mac, std::vector<uint8_t> const& packet, size_t dist);
+    void receive_packet(MACAddress src_mac, std::vector<uint8_t> const& packet, size_t dist);
     bool log(std::string logline);
 };
 

@@ -84,7 +84,7 @@ void Simulation::send_packet(MACAddress src_mac, MACAddress dest_mac, std::vecto
         packets_distance += it->second;
     }
 
-    dest_nt->receive_frame(src_mac, packet, it->second);
+    dest_nt->receive_packet(src_mac, packet, it->second);
 }
 void Simulation::broadcast_packet(MACAddress src_mac, std::vector<uint8_t> const& packet, bool from_do_periodic)
 {
@@ -98,7 +98,7 @@ void Simulation::broadcast_packet(MACAddress src_mac, std::vector<uint8_t> const
             packets_distance += r.second;
         }
 
-        nodes.at(dest_mac)->receive_frame(src_mac, packet, r.second);
+        nodes.at(dest_mac)->receive_packet(src_mac, packet, r.second);
     }
 }
 void Simulation::verify_received_segment(IPAddress src_ip, MACAddress dest_mac, std::vector<uint8_t> const& segment)

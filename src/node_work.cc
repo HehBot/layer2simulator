@@ -111,7 +111,7 @@ void NodeWork::add_to_send_segment_queue(SegmentToSendInfo o)
     outbound.push_back(o);
 }
 
-void NodeWork::receive_frame(MACAddress src_mac, std::vector<uint8_t> const& packet, size_t dist)
+void NodeWork::receive_packet(MACAddress src_mac, std::vector<uint8_t> const& packet, size_t dist)
 {
     std::unique_lock<std::mutex> ul(inbound_mt);
     inbound.push(PacketReceivedInfo { src_mac, dist, packet });
