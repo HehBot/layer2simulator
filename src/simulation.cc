@@ -127,7 +127,6 @@ void Simulation::node_log(MACAddress mac, std::string logline) const
 Simulation::Simulation(bool node_log_enabled, std::string node_log_file_prefix, std::istream& net_spec, size_t delay_ms)
     : delay_ms(delay_ms), node_log_enabled(node_log_enabled), node_log_file_prefix(node_log_file_prefix)
 {
-    // XXX add others
     enum class NT {
         NAIVE,
         BLASTER,
@@ -137,7 +136,6 @@ Simulation::Simulation(bool node_log_enabled, std::string node_log_file_prefix, 
     std::string nt_str;
     net_spec >> nt_str;
 
-    // XXX add others
     if (nt_str == "naive")
         node_type = NT::NAIVE;
     else if (nt_str == "blaster")
@@ -176,7 +174,6 @@ Simulation::Simulation(bool node_log_enabled, std::string node_log_file_prefix, 
         MACAddress mac = i.second;
         Node* node = nullptr;
 
-        // XXX add others
         switch (node_type) {
         case NT::NAIVE:
             node = new NaiveNode(this, mac, ip);
