@@ -188,13 +188,6 @@ void Simulation::run(std::istream& msgfile)
 
         log(LogLevel::INFO, "Total packets transmitted = " + std::to_string(packets_transmitted));
         log(LogLevel::INFO, "Total packet distance     = " + std::to_string(packets_distance));
-        double avg_nonperiodic_packet_distance = packets_distance * 1.0 / packets_transmitted;
-        log(LogLevel::INFO, "Average packet distance   = " + std::to_string(avg_nonperiodic_packet_distance));
-        double avg_packet_distance = total_packets_distance * 1.0 / total_packets_transmitted;
-        log(LogLevel::INFO, "Total packets transmitted (incl. periodic) = " + std::to_string(total_packets_transmitted));
-        log(LogLevel::INFO, "Total packet distance     (incl. periodic) = " + std::to_string(total_packets_distance));
-        log(LogLevel::INFO, "Average packet distance   (incl. periodic) = " + std::to_string(avg_packet_distance));
-
         if (packets_transmitted != ideal_packets_transmitted)
             log(LogLevel::ERROR, "Ideal packets transmitted = " + std::to_string(ideal_packets_transmitted));
         if (packets_distance != ideal_packets_distance)

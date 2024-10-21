@@ -11,22 +11,22 @@
  *          IP = MAC * 1000
  */
 
-struct PacketHeader {
+struct NaivePacketHeader {
 private:
-    PacketHeader() = default;
+    NaivePacketHeader() = default;
 
 public:
     bool is_broadcast;
     IPAddress src_ip;
     IPAddress dest_ip;
 
-    PacketHeader(IPAddress src_ip)
+    NaivePacketHeader(IPAddress src_ip)
         : is_broadcast(true), src_ip(src_ip), dest_ip(0) { }
-    PacketHeader(IPAddress src_ip, IPAddress dest_ip)
+    NaivePacketHeader(IPAddress src_ip, IPAddress dest_ip)
         : is_broadcast(false), src_ip(src_ip), dest_ip(dest_ip) { }
-    static PacketHeader from_bytes(uint8_t const* bytes)
+    static NaivePacketHeader from_bytes(uint8_t const* bytes)
     {
-        PacketHeader ph;
+        NaivePacketHeader ph;
         memcpy(&ph, bytes, sizeof(ph));
         return ph;
     }
@@ -36,7 +36,7 @@ void NaiveNode::send_segment(IPAddress dest_ip, std::vector<uint8_t> const& segm
 {
     MACAddress dest_mac = dest_ip / 1000;
 
-    auto ph = PacketHeader(ip, dest_ip);
+    auto ph = NaivePacketHeader(ip, dest_ip);
 
     std::vector<uint8_t> packet(sizeof(ph) + segment.size());
 
@@ -47,7 +47,7 @@ void NaiveNode::send_segment(IPAddress dest_ip, std::vector<uint8_t> const& segm
 }
 void NaiveNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> packet, size_t distance)
 {
-    PacketHeader ph = PacketHeader::from_bytes(&packet[0]);
+    NaivePacketHeader ph = NaivePacketHeader::from_bytes(&packet[0]);
 
     if (ph.is_broadcast) {
         log("Received broadcast from " + std::to_string(ph.src_ip));
@@ -64,7 +64,7 @@ void NaiveNode::do_periodic()
 {
     log("Broadcasting");
     std::string s = "BROADCAST FROM " + std::to_string(ip);
-    PacketHeader ph(ip, 0);
+    NaivePacketHeader ph(ip, 0);
     std::vector<uint8_t> packet(sizeof(ph) + s.length());
     memcpy(&packet[0], &ph, sizeof(ph));
     memcpy(&packet[sizeof(ph)], &s[0], s.length());
