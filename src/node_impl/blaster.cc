@@ -10,20 +10,20 @@
  * with a TTL to ensure packets don't last forever
  */
 
-struct PacketHeader {
+struct BlasterPacketHeader {
 private:
-    PacketHeader() = default;
+    BlasterPacketHeader() = default;
 
 public:
     IPAddress src_ip;
     IPAddress dest_ip;
     size_t ttl;
 
-    PacketHeader(IPAddress src_ip, IPAddress dest_ip)
+    BlasterPacketHeader(IPAddress src_ip, IPAddress dest_ip)
         : src_ip(src_ip), dest_ip(dest_ip), ttl(MAX_TTL) { }
-    static PacketHeader from_bytes(uint8_t const* bytes)
+    static BlasterPacketHeader from_bytes(uint8_t const* bytes)
     {
-        PacketHeader ph;
+        BlasterPacketHeader ph;
         memcpy(&ph, bytes, sizeof(ph));
         return ph;
     }
@@ -31,21 +31,15 @@ public:
 
 void BlasterNode::send_segment(IPAddress dest_ip, std::vector<uint8_t> const& segment) const
 {
-    auto ph = PacketHeader(ip, dest_ip);
-
+    BlasterPacketHeader ph(ip, dest_ip);
     std::vector<uint8_t> packet(sizeof(ph) + segment.size());
-
     memcpy(&packet[0], &ph, sizeof(ph));
     memcpy(&packet[sizeof(ph)], &segment[0], segment.size());
-
     broadcast_packet(packet);
 }
 void BlasterNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> packet, size_t distance)
 {
-    PacketHeader ph = PacketHeader::from_bytes(&packet[0]);
-
-    log(std::to_string(ph.ttl));
-
+    BlasterPacketHeader ph = BlasterPacketHeader::from_bytes(&packet[0]);
     if (ph.dest_ip == ip) {
         std::vector<uint8_t> segment(packet.begin() + sizeof(ph), packet.end());
         receive_segment(ph.src_ip, segment);

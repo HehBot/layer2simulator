@@ -6,22 +6,22 @@
 #define INITIAL_VALIDITY 100
 #define MAX_TTL 4
 
-struct PacketHeader {
+struct DVRPacketHeader {
 private:
-    PacketHeader() = default;
+    DVRPacketHeader() = default;
 
 public:
-    static PacketHeader payload_header(IPAddress src_ip, IPAddress dest_ip)
+    static DVRPacketHeader payload_header(IPAddress src_ip, IPAddress dest_ip)
     {
-        return PacketHeader { false, src_ip, dest_ip, MAX_TTL };
+        return DVRPacketHeader { false, src_ip, dest_ip, MAX_TTL };
     }
-    static PacketHeader dv_header(IPAddress my_ip)
+    static DVRPacketHeader dv_header(IPAddress my_ip)
     {
-        return PacketHeader { true, my_ip, 0, 0 };
+        return DVRPacketHeader { true, my_ip, 0, 0 };
     }
-    static PacketHeader from_bytes(uint8_t const* bytes)
+    static DVRPacketHeader from_bytes(uint8_t const* bytes)
     {
-        PacketHeader ph;
+        DVRPacketHeader ph;
         memcpy(&ph, bytes, sizeof(ph));
         return ph;
     }
@@ -58,17 +58,17 @@ void DVRNode::send_packet_to(IPAddress dest_ip, std::vector<uint8_t> const& pack
 
 void DVRNode::send_segment(IPAddress dest_ip, std::vector<uint8_t> const& segment) const
 {
-    PacketHeader pkt_header = PacketHeader::payload_header(ip, dest_ip);
-    std::vector<uint8_t> packet(sizeof(PacketHeader) + segment.size());
-    memcpy(&packet[0], &pkt_header, sizeof(PacketHeader));
-    memcpy(&packet[sizeof(PacketHeader)], &segment[0], segment.size());
+    DVRPacketHeader pkt_header = DVRPacketHeader::payload_header(ip, dest_ip);
+    std::vector<uint8_t> packet(sizeof(DVRPacketHeader) + segment.size());
+    memcpy(&packet[0], &pkt_header, sizeof(DVRPacketHeader));
+    memcpy(&packet[sizeof(DVRPacketHeader)], &segment[0], segment.size());
 
     send_packet_to(dest_ip, packet);
 }
 
 void DVRNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> packet, size_t distance)
 {
-    PacketHeader pkt_header = PacketHeader::from_bytes(&packet[0]);
+    DVRPacketHeader pkt_header = DVRPacketHeader::from_bytes(&packet[0]);
 
     if (pkt_header.is_dv_table) {
         /*
@@ -80,7 +80,7 @@ void DVRNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> packet, si
         dv_table[neighbor_ip] = RoutingInfo { neighbor_mac, distance, INITIAL_VALIDITY };
         neighbor_ips[neighbor_mac] = neighbor_ip;
 
-        for (DVEntry const* ptr = (DVEntry*)&packet[sizeof(PacketHeader)]; ptr < (DVEntry*)&packet[packet.size()]; ptr++) {
+        for (DVEntry const* ptr = (DVEntry*)&packet[sizeof(DVRPacketHeader)]; ptr < (DVEntry*)&packet[packet.size()]; ptr++) {
             DVEntry const& neighbor_dve = *ptr;
             IPAddress dest_ip = neighbor_dve.ip;
 
@@ -117,7 +117,7 @@ void DVRNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> packet, si
             /*
              * the segment was intended for us
              */
-            std::vector<uint8_t> segment(packet.begin() + sizeof(PacketHeader), packet.end());
+            std::vector<uint8_t> segment(packet.begin() + sizeof(DVRPacketHeader), packet.end());
             receive_segment(pkt_header.src_ip, segment);
 
         } else {
@@ -132,7 +132,7 @@ void DVRNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> packet, si
             }
             IPAddress dest_ip = pkt_header.dest_ip;
             pkt_header.ttl--;
-            memcpy(&packet[0], &pkt_header, sizeof(PacketHeader));
+            memcpy(&packet[0], &pkt_header, sizeof(DVRPacketHeader));
 
             send_packet_to(dest_ip, packet);
         }
@@ -171,10 +171,10 @@ void DVRNode::do_periodic()
     /*
      * broadcast our DV table to neighbours
      */
-    std::vector<uint8_t> packet(sizeof(PacketHeader) + sizeof(DVEntry) * dv_table.size());
-    PacketHeader pkt_header = PacketHeader::dv_header(ip);
-    memcpy(&packet[0], &pkt_header, sizeof(PacketHeader));
-    size_t off = sizeof(PacketHeader);
+    std::vector<uint8_t> packet(sizeof(DVRPacketHeader) + sizeof(DVEntry) * dv_table.size());
+    DVRPacketHeader pkt_header = DVRPacketHeader::dv_header(ip);
+    memcpy(&packet[0], &pkt_header, sizeof(DVRPacketHeader));
+    size_t off = sizeof(DVRPacketHeader);
     for (auto dv_entry : dv_table) {
         DVEntry dve = { dv_entry.first, dv_entry.second.distance, dv_entry.second.validity };
         memcpy(&packet[off], &dve, sizeof(dve));
