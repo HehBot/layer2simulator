@@ -3,6 +3,7 @@
 #undef broadcast_packet
 
 #include "node_impl/blaster.h"
+#include "node_impl/dvr.h"
 #include "node_impl/naive.h"
 #include "node_work.h"
 #include "simulation.h"
@@ -126,20 +127,21 @@ void Simulation::node_log(MACAddress mac, std::string logline) const
 Simulation::Simulation(bool node_log_enabled, std::string node_log_file_prefix, std::istream& net_spec, size_t delay_ms)
     : delay_ms(delay_ms), node_log_enabled(node_log_enabled), node_log_file_prefix(node_log_file_prefix)
 {
-    // XXX add others
     enum class NT {
         NAIVE,
         BLASTER,
+        DVR,
     } node_type;
 
     std::string nt_str;
     net_spec >> nt_str;
 
-    // XXX add others
     if (nt_str == "naive")
         node_type = NT::NAIVE;
     else if (nt_str == "blaster")
         node_type = NT::BLASTER;
+    else if (nt_str == "dvr")
+        node_type = NT::DVR;
     else
         throw std::invalid_argument(std::string("Bad network file: Unknown node type '") + nt_str + "'");
 
@@ -172,13 +174,15 @@ Simulation::Simulation(bool node_log_enabled, std::string node_log_file_prefix, 
         MACAddress mac = i.second;
         Node* node = nullptr;
 
-        // XXX add others
         switch (node_type) {
         case NT::NAIVE:
             node = new NaiveNode(this, mac, ip);
             break;
         case NT::BLASTER:
             node = new BlasterNode(this, mac, ip);
+            break;
+        case NT::DVR:
+            node = new DVRNode(this, mac, ip);
             break;
         }
 
