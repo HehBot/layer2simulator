@@ -1,6 +1,6 @@
 #include "node.h"
 #undef send_packet
-#undef broadcast_packet
+#undef broadcast_packet_to_all_neighbors
 
 #include "node_impl/blaster.h"
 #include "node_impl/dvr.h"
@@ -44,9 +44,9 @@ void Node::send_packet(MACAddress dest_mac, std::vector<uint8_t> const& packet, 
 {
     simul->send_packet(this->mac, dest_mac, packet, std::string("do_periodic") == caller_name);
 }
-void Node::broadcast_packet(std::vector<uint8_t> const& packet, char const* caller_name) const
+void Node::broadcast_packet_to_all_neighbors(std::vector<uint8_t> const& packet, char const* caller_name) const
 {
-    simul->broadcast_packet(this->mac, packet, std::string("do_periodic") == caller_name);
+    simul->broadcast_packet_to_all_neighbors(this->mac, packet, std::string("do_periodic") == caller_name);
 }
 void Node::receive_segment(IPAddress src_ip, std::vector<uint8_t> const& segment) const
 {
@@ -86,7 +86,7 @@ void Simulation::send_packet(MACAddress src_mac, MACAddress dest_mac, std::vecto
 
     dest_nt->receive_packet(src_mac, packet, it->second);
 }
-void Simulation::broadcast_packet(MACAddress src_mac, std::vector<uint8_t> const& packet, bool from_do_periodic)
+void Simulation::broadcast_packet_to_all_neighbors(MACAddress src_mac, std::vector<uint8_t> const& packet, bool from_do_periodic)
 {
     for (auto r : adj.at(src_mac)) {
         MACAddress dest_mac = r.first;

@@ -3,7 +3,7 @@
 
 #include "node.h"
 #undef send_packet
-#undef broadcast_packet
+#undef broadcast_packet_to_all_neighbors
 
 #include <atomic>
 #include <map>
@@ -50,7 +50,7 @@ public:
     ~Simulation();
 
     void send_packet(MACAddress src_mac, MACAddress dest_mac, std::vector<uint8_t> const& packet, bool from_do_periodic);
-    void broadcast_packet(MACAddress src_mac, std::vector<uint8_t> const& packet, bool from_do_periodic);
+    void broadcast_packet_to_all_neighbors(MACAddress src_mac, std::vector<uint8_t> const& packet, bool from_do_periodic);
     void verify_received_segment(IPAddress src_ip, MACAddress dest_mac, std::vector<uint8_t> const& segment);
     void node_log(MACAddress, std::string logline) const;
 };

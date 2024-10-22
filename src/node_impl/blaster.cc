@@ -35,7 +35,7 @@ void BlasterNode::send_segment(IPAddress dest_ip, std::vector<uint8_t> const& se
     std::vector<uint8_t> packet(sizeof(ph) + segment.size());
     memcpy(&packet[0], &ph, sizeof(ph));
     memcpy(&packet[sizeof(ph)], &segment[0], segment.size());
-    broadcast_packet(packet);
+    broadcast_packet_to_all_neighbors(packet);
 }
 void BlasterNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> packet, size_t distance)
 {
@@ -48,6 +48,6 @@ void BlasterNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> packet
     else {
         ph.ttl--;
         memcpy(&packet[0], &ph, sizeof(ph));
-        broadcast_packet(packet);
+        broadcast_packet_to_all_neighbors(packet);
     }
 }
