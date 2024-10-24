@@ -6,13 +6,10 @@
 #include <vector>
 
 class DVRNode : public Node {
-private:
     /*
      * XXX
      * Add any fields, helper functions etc here
      */
-
-    void send_packet_to(IPAddress dest_ip, std::vector<uint8_t> const& packet) const;
 
 public:
     /*
