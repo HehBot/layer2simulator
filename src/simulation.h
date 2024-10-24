@@ -45,7 +45,12 @@ private:
     std::optional<std::pair<size_t, size_t>> hop_count_with_min_distance(MACAddress m1, MACAddress m2) const;
 
 public:
-    Simulation(bool log_enabled, std::string logfile_prefix, std::istream& net_spec, size_t delay_ms);
+    enum class NT {
+        NAIVE,
+        BLASTER,
+        DVR,
+    };
+    Simulation(NT node_type, bool log_enabled, std::string logfile_prefix, std::istream& net_spec, size_t delay_ms);
     void run(std::istream& msg_file);
     ~Simulation();
 

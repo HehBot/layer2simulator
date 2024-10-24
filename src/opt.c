@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 static char const* doc = "layer2simulator - A Layer 2 Network Simulator";
-static char const* args_doc = "NET_SPEC_FILE MSGS_FILE";
+static char const* args_doc = "NODE_TYPE FILE.netspec FILE.msgs";
 static struct argp_option options[] = {
     { "log", 'l', "NODE_LOG_FILE_PREFIX", OPTION_ARG_OPTIONAL, "Emit node-wise logs to file \"{NODE_LOG_FILE_PREFIX}{mac}.log\"\n(default: \"node-\")" },
     { "delay", 'd', "DELAY", 0, "Add delay in ms (50ms if unspecified)" },
@@ -12,7 +12,7 @@ static struct argp_option options[] = {
 
 bool log_enabled = false;
 char const* logfile_prefix = "node-";
-char const* args[2] = { 0 };
+char const* args[3] = { 0 };
 size_t delay_ms = 50;
 
 static error_t parse_opt(int key, char* arg, struct argp_state* state)
@@ -27,12 +27,12 @@ static error_t parse_opt(int key, char* arg, struct argp_state* state)
         delay_ms = atoi(arg);
         break;
     case ARGP_KEY_ARG:
-        if (state->arg_num >= 2)
+        if (state->arg_num >= 3)
             argp_usage(state);
         args[state->arg_num] = arg;
         break;
     case ARGP_KEY_END:
-        if (state->arg_num < 1)
+        if (state->arg_num < 3)
             argp_usage(state);
         break;
     default:

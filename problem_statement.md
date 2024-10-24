@@ -102,17 +102,22 @@ To build the code, we will use GNU Make (please use WSL if you are on Windows, o
 ```
 make -j
 ```
-This creates an executable `bin/main`. To run the simulation using `file.netspec` (containing description of the network) and `file.msgs` (containing list of segments to be sent and UP/DOWN instructions)
+This creates an executable `bin/main`. To run the simulation using
+ - node type `naive` (can be one of `naive`, `blaster`, or `dvr`) and files
+ - `file.netspec` (containing description of the network) and
+ - `file.msgs` (containing list of segments to be sent and UP/DOWN instructions),
 ```
-./bin/main file.netspec file.msgs
+./bin/main naive file.netspec file.msgs
 ```
 To enable nodewise logging (i.e. the `log` function of the `Node` class, refer to `src/node_impl/naive.cc` for usage)
 ```
-./bin/main file.netspec file.msgs --log
+./bin/main naive file.netspec file.msgs --log
 ```
+> Advice: Do not use `std::cout` for debugging from inside a node; this won't give helpful output since the simulator is multi-threaded and the output will be all mixed up.
+
 To run the simulation with the aforementioned `delay` as 10ms (default 50ms)
 ```
-./bin/main file.netspec file.msgs --delay 10
+./bin/main naive file.netspec file.msgs --delay 10
 ```
 ## Submission Instructions
 Submit the files `src/node_impl/dvr.cc` and `src/node_impl/dvr.h` along with a `README.md` markdown explaining your protocol in the following directory structure:
@@ -139,7 +144,7 @@ For each test case we will request 100 segments to be delivered `n` times, with 
 
 For each test case, you will receive points depending on how many segments made it to their destination (more the better), how many packets with useful bytes were transmitted (less the better) and total distance covered by such packets (less the better). Example instances of the above four are given in `example_testcases` folder. The ones used for grading will be different.
 
-> This lab will be autograded, so please make sure all debug logging is done only using `log`. **DO NOT USE** `std::cout`!
+> **Note: This lab will be autograded**
 
 ## Plagiarism Warning
 **You are NOT permitted to share code solutions with others or to use GPTs for generating code. Any cases of plagiarism/GPT use will be dealt with as per institute policy without exception. We will be running all submissions through MOSS, GPT detectors, and a host of other countermeasures.**

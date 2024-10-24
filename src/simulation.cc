@@ -124,27 +124,9 @@ void Simulation::node_log(MACAddress mac, std::string logline) const
         log(LogLevel::WARNING, "Too many logs emitted at (mac:" + std::to_string(mac) + "), no more logs will be written");
 }
 
-Simulation::Simulation(bool node_log_enabled, std::string node_log_file_prefix, std::istream& net_spec, size_t delay_ms)
+Simulation::Simulation(NT node_type, bool node_log_enabled, std::string node_log_file_prefix, std::istream& net_spec, size_t delay_ms)
     : delay_ms(delay_ms), node_log_enabled(node_log_enabled), node_log_file_prefix(node_log_file_prefix)
 {
-    enum class NT {
-        NAIVE,
-        BLASTER,
-        DVR,
-    } node_type;
-
-    std::string nt_str;
-    net_spec >> nt_str;
-
-    if (nt_str == "naive")
-        node_type = NT::NAIVE;
-    else if (nt_str == "blaster")
-        node_type = NT::BLASTER;
-    else if (nt_str == "dvr")
-        node_type = NT::DVR;
-    else
-        throw std::invalid_argument(std::string("Bad network file: Unknown node type '") + nt_str + "'");
-
     size_t nr_nodes, nr_edges;
     net_spec >> nr_nodes;
     for (size_t i = 0; i < nr_nodes; ++i) {
