@@ -20,8 +20,10 @@ int main(int ac, char** av)
         { "blaster", Simulation::NT::BLASTER },
         { "rp", Simulation::NT::RP },
     };
-    if (m.count(args[0]) == 0)
-        throw std::invalid_argument(std::string("Bad node type '") + args[0] + "'");
+    if (m.count(args[0]) == 0) {
+        std::cerr << "Bad node type '" << args[0] << "', should be one of 'naive', 'blaster', or 'rp'\n";
+        return 1;
+    }
 
     std::ifstream net_spec_file(args[1]);
     if (!net_spec_file.is_open()) {
