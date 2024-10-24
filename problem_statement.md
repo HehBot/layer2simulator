@@ -74,12 +74,20 @@ The simulator reads the segments (i.e. data that is to be sent) from a file give
 #### Description
  - `do_periodic` is called periodically by the simulator on each of the nodes.
  - Tasks done by this function should be the ones that you want to be done periodically on every node.
-> Think what kind of tasks are periodic in routing protocols
+> Think about what kind of tasks are periodic in routing protocols
+
+Refer to the below figure to understand the purpose of each of the above functions
+![function diagram](./diagram.png)
+ - `send_segment`: Blue colored arrows together show the expected result of the simulator calling `send_segment` on node A with destination IP address of node C
+ - `receive_segment`: The simulator expects node C to call `receive_segment` with the contents of the above segment
+ - `send_packet`: Blue and green colored arrows show what happens when a node calls `send_packet`; the latter is when node A calls `send_packet` with destination MAC address of node E
+ - `receive_packet`: The simulator calls this function on a node whenever it receives a packet, so each arrow results in an invocation at the destination node
+ - `broadcast_packet_to_all_neighbors`: Red arrows together show what happens when a node calls `broadcast_packet_to_all_neighbors`
 
 ---
 
- - Network topology is specified in a file (first argument to simulator). You can check out `example_net_spec` to understand its structure.
- - Messages that need to be sent are also specified in a file (second argument to simulator). You can check out `example_msgs` to understand its structure. It also contains the instructions to bring down or bring up specified nodes (using `DOWN` and `UP`).
+ - Network topology is specified in a file (first argument to simulator). You can check out `example_testcases/*.netspec` to understand its structure.
+ - Messages that need to be sent are also specified in a file (second argument to simulator). You can check out `example_testcases/*.msgs` to understand its structure. It also contains the instructions to bring down or bring up specified nodes (using `DOWN` and `UP`).
 
 ## More on protocol specifications
 
@@ -90,21 +98,21 @@ The simulator reads the segments (i.e. data that is to be sent) from a file give
 5. After the simulator brings down (or up) a certain node, it again runs `do_periodic` function for short period (the aforementioned `delay`). Only after this do the actual transmissions start. This time period is again provided for your protocol to converge (as your protocol may need to find alternate path).
 
 ## Running Instructions
-To build the code, we will use GNU Make (please use WSL if you are on Windows, or compile manually if you prefer; the code is written in a platform agnostic way and should run on Windows as well but we give no guarantees).
+To build the code, we will use GNU Make (please use WSL if you are on Windows, or compile manually if you prefer; the code is written in a platform agnostic way and should run on Windows as well but we give no guarantees; on MAC you should make the changes specified in the first three lines of the `Makefile`).
 ```
 make -j
 ```
-This creates an executable `bin/main`. To run the simulation using `net_spec` (containing description of the network) and `msgs` (containing list of segments to be sent and UP/DOWN instructions)
+This creates an executable `bin/main`. To run the simulation using `file.netspec` (containing description of the network) and `file.msgs` (containing list of segments to be sent and UP/DOWN instructions)
 ```
-./bin/main net_spec msgs
+./bin/main file.netspec file.msgs
 ```
 To enable nodewise logging (i.e. the `log` function of the `Node` class, refer to `src/node_impl/naive.cc` for usage)
 ```
-./bin/main net_spec msgs --log
+./bin/main file.netspec file.msgs --log
 ```
 To run the simulation with the aforementioned `delay` as 10ms (default 50ms)
 ```
-./bin/main net_spec msgs --delay 10
+./bin/main file.netspec file.msgs --delay 10
 ```
 ## Submission Instructions
 Submit the files `src/node_impl/dvr.cc` and `src/node_impl/dvr.h` along with a `README.md` markdown explaining your protocol in the following directory structure:
@@ -121,4 +129,17 @@ tar -czvf <roll_number>_lab7.tgz <roll_number>_lab7
 and you should submit `<roll_number>_lab7.tgz`
 
 ## Grading
-TODO
+You will be graded on four test cases weighted by difficulty (with 10 points for cleanly written and well-commented code):
+ - `clique` Clique network                  (12)
+ - `nhop`   n-hop network                   (19)
+ - `lfmr`   Loop-free multi-route network   (26)
+ - `mrwl`   Multi-route network with loops  (33)
+
+For each test case we will request 100 segments to be delivered `n` times, with selected nodes being made down/up between runs (i.e. `100n` segments in total where `n-1` down/up operations took place).
+
+For each test case, you will receive points depending on how many segments made it to their destination (more the better), how many packets with useful bytes were transmitted (less the better) and total distance covered by such packets (less the better). Example instances of the above four are given in `example_testcases` folder. The ones used for grading will be different.
+
+> This lab will be autograded, so please make sure all debug logging is done only using `log`. **DO NOT USE** `std::cout`!
+
+## Plagiarism Warning
+**You are NOT permitted to share code solutions with others or to use GPTs for generating code. Any cases of plagiarism/GPT use will be dealt with as per institute policy without exception. We will be running all submissions through MOSS, GPT detectors, and a host of other countermeasures.**
