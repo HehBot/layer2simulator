@@ -18,7 +18,7 @@ int main(int ac, char** av)
     std::map<std::string, Simulation::NT> m = {
         { "naive", Simulation::NT::NAIVE },
         { "blaster", Simulation::NT::BLASTER },
-        { "dvr", Simulation::NT::DVR },
+        { "rp", Simulation::NT::RP },
     };
     if (m.count(args[0]) == 0)
         throw std::invalid_argument(std::string("Bad node type '") + args[0] + "'");

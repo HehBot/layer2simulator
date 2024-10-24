@@ -3,8 +3,8 @@
 #undef broadcast_packet_to_all_neighbors
 
 #include "node_impl/blaster.h"
-#include "node_impl/dvr.h"
 #include "node_impl/naive.h"
+#include "node_impl/rp.h"
 #include "node_work.h"
 #include "simulation.h"
 
@@ -175,8 +175,8 @@ Simulation::Simulation(NT node_type, bool node_log_enabled, std::string node_log
         case NT::BLASTER:
             node = new BlasterNode(this, mac, ip);
             break;
-        case NT::DVR:
-            node = new DVRNode(this, mac, ip);
+        case NT::RP:
+            node = new RPNode(this, mac, ip);
             break;
         }
 

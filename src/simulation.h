@@ -51,7 +51,7 @@ public:
     enum class NT {
         NAIVE,
         BLASTER,
-        DVR,
+        RP,
     };
     Simulation(NT node_type, bool log_enabled, std::string logfile_prefix, std::istream& net_spec, size_t delay_ms, bool grading_view);
     void run(std::istream& msg_file);
