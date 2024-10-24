@@ -3,7 +3,7 @@
 
 #include "node.h"
 #undef send_packet
-#undef broadcast_packet
+#undef broadcast_packet_to_all_neighbors
 
 #include <condition_variable>
 #include <cstdint>

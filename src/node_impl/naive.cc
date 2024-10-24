@@ -68,5 +68,5 @@ void NaiveNode::do_periodic()
     std::vector<uint8_t> packet(sizeof(ph) + s.length());
     memcpy(&packet[0], &ph, sizeof(ph));
     memcpy(&packet[sizeof(ph)], &s[0], s.length());
-    broadcast_packet(packet);
+    broadcast_packet_to_all_neighbors(packet);
 }

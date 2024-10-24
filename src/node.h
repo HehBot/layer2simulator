@@ -35,8 +35,9 @@ public:
 
 protected:
     /*
-     * use this in your implementation of send_segment
-     * XXX WARNING use it as send_packet(dest_mac, packet), do not provide any argument for metadata!
+     * use this to send a packet to a neighbor
+     * XXX WARNING use it as send_packet(dest_mac, packet)
+     *      DO NOT provide any argument for metadata!
      * for reference see node_impl/naive.cc
      */
     void send_packet(MACAddress dest_mac, std::vector<uint8_t> const& packet, char const* metadata) const;
@@ -50,10 +51,11 @@ protected:
 
     /*
      * use this to broadcast to all neighbours
-     * XXX WARNING use it as broadcast_packet(packet), do not provide any argument for metadata!
+     * XXX WARNING use it as send_packet_to_all_neigbors(packet)
+     *      DO NOT provide any argument for metadata!
      * for reference see node_impl/naive.cc
      */
-    void broadcast_packet(std::vector<uint8_t> const& packet, char const* metadata) const;
+    void broadcast_packet_to_all_neighbors(std::vector<uint8_t> const& packet, char const* metadata) const;
 
     /*
      * use this for debugging (writes logs to a file named "node-`mac`.log")
@@ -62,6 +64,6 @@ protected:
 };
 
 #define send_packet(X, Y) send_packet(X, Y, __func__)
-#define broadcast_packet(X) broadcast_packet(X, __func__)
+#define broadcast_packet_to_all_neighbors(X) broadcast_packet_to_all_neighbors(X, __func__)
 
 #endif // NODE_H

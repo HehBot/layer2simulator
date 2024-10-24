@@ -1,7 +1,7 @@
-CXX := g++
-CC := gcc
-LD := g++
-TARGET_NAME := main
+CXX = g++ # change to clang++ on mac
+CC = gcc  # change to clang on mac
+LD = g++  # change to clang++ on mac
+TARGET_NAME = main
 
 BUILD_DIR := build
 BIN_DIR := bin
@@ -34,6 +34,6 @@ $(BUILD_DIR)/%.c.o: %.c
 	$(CC) -c $(CCFLAGS) -o $@ $<
 
 clean:
-	rm -rf $(BUILD_DIR) $(BIN_DIR)
+	$(RM) -r $(BUILD_DIR) $(BIN_DIR)
 
 -include $(DEPS)

@@ -88,6 +88,11 @@ void Simulation::run(std::istream& msgfile)
         packets_distance = 0;
         total_packets_transmitted = 0;
         total_packets_distance = 0;
+        nr_segments_wrongly_delivered = 0;
+
+        size_t ideal_packets_transmitted = 0;
+        size_t ideal_packets_distance = 0;
+        size_t nr_segments_to_be_delivered = 0;
 
         for (auto g : nodes)
             g.second->launch_recv();
@@ -95,9 +100,6 @@ void Simulation::run(std::istream& msgfile)
             g.second->launch_periodic();
 
         std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
-
-        size_t ideal_packets_transmitted = 0;
-        size_t ideal_packets_distance = 0;
 
         do {
             std::stringstream ss(line);
@@ -149,6 +151,7 @@ void Simulation::run(std::istream& msgfile)
                         log(LogLevel::WARNING, "Graph is disconnected, (ip:" + std::to_string(dest_ip) + ") is unreachable from (mac:" + std::to_string(src_mac) + ")");
                 }
 
+                nr_segments_to_be_delivered += count;
                 if (count == 1) {
                     segment_delivered[{ it2->second, segment }] = false;
                     nodes[src_mac]->add_to_send_segment_queue(NodeWork::SegmentToSendInfo(dest_ip, std::vector<uint8_t>(segment.begin(), segment.end())));
@@ -193,18 +196,22 @@ void Simulation::run(std::istream& msgfile)
         if (packets_distance != ideal_packets_distance)
             log(LogLevel::ERROR, "Ideal packets distance    = " + std::to_string(ideal_packets_distance));
 
-        bool found_undelivered = false;
+        size_t nr_segments_undelivered = 0;
         std::stringstream ss;
         ss << "Some segment(s) not delivered:\n";
         for (auto i : segment_delivered) {
             if (!i.second) {
-                found_undelivered = true;
+                nr_segments_undelivered++;
                 ss << "\tAt (mac:" << i.first.first << ") with contents:\n\t\t" << i.first.second << '\n';
             }
         }
-        if (found_undelivered)
+        if (nr_segments_undelivered > 0)
             log(LogLevel::ERROR, ss.str());
         segment_delivered.clear();
+
+        log(LogLevel::STATS, std::to_string(packets_transmitted) + " " + std::to_string(ideal_packets_transmitted));
+        log(LogLevel::STATS, std::to_string(packets_distance) + " " + std::to_string(ideal_packets_distance));
+        log(LogLevel::STATS, std::to_string(nr_segments_undelivered) + " " + std::to_string(nr_segments_wrongly_delivered) + " " + std::to_string(nr_segments_to_be_delivered));
 
         // up/down nodes
         do {

@@ -47,7 +47,7 @@ void DVRNode::send_packet_to(IPAddress dest_ip, std::vector<uint8_t> const& pack
         /*
          * if we do not have a route to `dest_ip` we broadcast it
          */
-        broadcast_packet(packet);
+        broadcast_packet_to_all_neighbors(packet);
     } else {
         /*
          * if we have a route to `dest_ip` we send it along that route
@@ -193,5 +193,5 @@ void DVRNode::do_periodic()
         memcpy(&packet[off], &dve, sizeof(dve));
         off += sizeof(dve);
     }
-    broadcast_packet(packet);
+    broadcast_packet_to_all_neighbors(packet);
 }
