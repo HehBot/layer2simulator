@@ -17,7 +17,16 @@
 
 void Simulation::log(LogLevel l, std::string logline) const
 {
+    if (grading_view && l != LogLevel::STATS)
+        return;
+    if (!grading_view && l == LogLevel::STATS)
+        return;
     std::lock_guard<std::mutex> lg(log_mt);
+    if (grading_view) {
+        std::cout << logline << '\n'
+                  << std::flush;
+        return;
+    }
     std::string ll;
     switch (l) {
     case LogLevel::DEBUG:
@@ -35,6 +44,8 @@ void Simulation::log(LogLevel l, std::string logline) const
     case LogLevel::ERROR:
         ll = "\x1b[31;1;5m[ERROR] \x1b[0m";
         break;
+    case LogLevel::STATS:
+        __builtin_unreachable();
     }
     std::cout << ll << logline << '\n'
               << std::flush;
@@ -106,9 +117,10 @@ void Simulation::verify_received_segment(IPAddress src_ip, MACAddress dest_mac, 
     std::string segment_str(segment.begin(), segment.end());
 
     auto it = segment_delivered.find({ dest_mac, segment_str });
-    if (it == segment_delivered.end())
+    if (it == segment_delivered.end()) {
         log(LogLevel::ERROR, "Segment from (ip:" + std::to_string(src_ip) + ") wrongly delivered to (mac:" + std::to_string(dest_mac) + ") with contents:\n\t" + segment_str);
-    else {
+        nr_segments_wrongly_delivered++;
+    } else {
         std::string logline = "(mac:" + std::to_string(dest_mac) + ") received segment from (ip:" + std::to_string(src_ip) + ") with contents:\n\t" + segment_str;
         if (it->second)
             logline = "{Duplicate delivery} " + logline;
@@ -124,8 +136,8 @@ void Simulation::node_log(MACAddress mac, std::string logline) const
         log(LogLevel::WARNING, "Too many logs emitted at (mac:" + std::to_string(mac) + "), no more logs will be written");
 }
 
-Simulation::Simulation(NT node_type, bool node_log_enabled, std::string node_log_file_prefix, std::istream& net_spec, size_t delay_ms)
-    : delay_ms(delay_ms), node_log_enabled(node_log_enabled), node_log_file_prefix(node_log_file_prefix)
+Simulation::Simulation(NT node_type, bool node_log_enabled, std::string node_log_file_prefix, std::istream& net_spec, size_t delay_ms, bool grading_view)
+    : grading_view(grading_view), delay_ms(delay_ms), node_log_enabled(node_log_enabled), node_log_file_prefix(node_log_file_prefix)
 {
     size_t nr_nodes, nr_edges;
     net_spec >> nr_nodes;

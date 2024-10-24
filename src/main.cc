@@ -4,6 +4,7 @@
 #include <iostream>
 
 extern "C" bool log_enabled;
+extern "C" bool grading_view;
 extern "C" char const* logfile_prefix;
 extern "C" char const* args[3];
 extern "C" size_t delay_ms;
@@ -33,6 +34,6 @@ int main(int ac, char** av)
         return 1;
     }
 
-    Simulation s(m[args[0]], log_enabled, logfile_prefix, net_spec_file, delay_ms);
+    Simulation s(m[args[0]], !!log_enabled, logfile_prefix, net_spec_file, delay_ms, !!grading_view);
     s.run(msg_file);
 }
