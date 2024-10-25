@@ -41,20 +41,20 @@ struct DVEntry {
 /*
  * helper function that performs gateway lookup and sends packet appropriately
  */
-void RPNode::send_packet_to(IPAddress dest_ip, std::vector<uint8_t> const& packet) const
+void RPNode::send_packet_to(IPAddress dest_ip, std::vector<uint8_t> const& packet, bool contains_segment) const
 {
     auto dv_entry = dv_table.find(dest_ip);
     if (dv_entry == dv_table.end() || dv_entry->second.validity == 0) {
         /*
          * if we do not have a route to `dest_ip` we broadcast it
          */
-        broadcast_packet_to_all_neighbors(packet);
+        broadcast_packet_to_all_neighbors(packet, contains_segment);
     } else {
         /*
          * if we have a route to `dest_ip` we send it along that route
          */
         MACAddress neighbor_to_send = dv_entry->second.gateway;
-        send_packet(neighbor_to_send, packet);
+        send_packet(neighbor_to_send, packet, contains_segment);
     }
 }
 
@@ -65,7 +65,7 @@ void RPNode::send_segment(IPAddress dest_ip, std::vector<uint8_t> const& segment
     memcpy(&packet[0], &pkt_header, sizeof(RPPacketHeader));
     memcpy(&packet[sizeof(RPPacketHeader)], &segment[0], segment.size());
 
-    send_packet_to(dest_ip, packet);
+    send_packet_to(dest_ip, packet, /*contains_segment*/ true);
 }
 
 void RPNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> packet, size_t distance)
@@ -144,7 +144,7 @@ void RPNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> packet, siz
             pkt_header.ttl--;
             memcpy(&packet[0], &pkt_header, sizeof(RPPacketHeader));
 
-            send_packet_to(dest_ip, packet);
+            send_packet_to(dest_ip, packet, /*contains_segment*/ true);
         }
     }
 }
@@ -183,5 +183,5 @@ void RPNode::do_periodic()
         memcpy(&packet[off], &dve, sizeof(dve));
         off += sizeof(dve);
     }
-    broadcast_packet_to_all_neighbors(packet);
+    broadcast_packet_to_all_neighbors(packet, /*contains_segment*/ false);
 }

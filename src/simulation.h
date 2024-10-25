@@ -2,8 +2,6 @@
 #define SIMULATION_H
 
 #include "node.h"
-#undef send_packet
-#undef broadcast_packet_to_all_neighbors
 
 #include <atomic>
 #include <map>

@@ -17,7 +17,7 @@ private:
     };
     std::unordered_map<IPAddress, RoutingInfo> dv_table;
 
-    void send_packet_to(IPAddress dest_ip, std::vector<uint8_t> const& packet) const;
+    void send_packet_to(IPAddress dest_ip, std::vector<uint8_t> const& packet, bool contains_segment) const;
 
 public:
     RPNode(Simulation* simul, MACAddress mac, IPAddress ip)

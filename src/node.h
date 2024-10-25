@@ -36,11 +36,12 @@ public:
 protected:
     /*
      * use this to send a packet to a neighbor
-     * XXX WARNING use it as send_packet(dest_mac, packet)
-     *      DO NOT provide any argument for metadata!
+     * set `contains_segment` to true to indicate to the simulator
+     *      that this packet contains a segment
+     *      (as opposed to protocol-related packets)
      * for reference see node_impl/naive.cc
      */
-    void send_packet(MACAddress dest_mac, std::vector<uint8_t> const& packet, char const* metadata) const;
+    void send_packet(MACAddress dest_mac, std::vector<uint8_t> const& packet, bool contains_segment) const;
 
     /*
      * use this in your implementation of receive_packet when you receive a segment
@@ -51,19 +52,17 @@ protected:
 
     /*
      * use this to broadcast to all neighbours
-     * XXX WARNING use it as send_packet_to_all_neigbors(packet)
-     *      DO NOT provide any argument for metadata!
+     * set `contains_segment` to true to indicate to the simulator
+     *      that this packet contains a segment
+     *      (as opposed to protocol-related packets)
      * for reference see node_impl/naive.cc
      */
-    void broadcast_packet_to_all_neighbors(std::vector<uint8_t> const& packet, char const* metadata) const;
+    void broadcast_packet_to_all_neighbors(std::vector<uint8_t> const& packet, bool contains_segment) const;
 
     /*
      * use this for debugging (writes logs to a file named "node-`mac`.log")
      */
     void log(std::string) const;
 };
-
-#define send_packet(X, Y) send_packet(X, Y, __func__)
-#define broadcast_packet_to_all_neighbors(X) broadcast_packet_to_all_neighbors(X, __func__)
 
 #endif // NODE_H
