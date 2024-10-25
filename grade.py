@@ -1,11 +1,13 @@
 import sys
 import math
 import subprocess
+import resource
 
 CSV_FILE = ""
 GRADING_TESTCASES = "grading_testcases"
 TESTS = {1: 12, 2: 19, 3: 26, 4: 33}
 TIMEOUT = 4  # timeout in sec
+MAX_MEM = round(2.5 * (1024**3))
 
 GRADING_PARAMS = {
     "undel_a": 20.0,
@@ -86,6 +88,10 @@ def compile():
     return result.returncode, "Compilation error: " + result.stderr.decode("utf-8")
 
 
+def limit_virtual_memory():
+    resource.setrlimit(resource.RLIMIT_AS, (MAX_MEM, resource.RLIM_INFINITY))
+
+
 def grade_testcase(i):
     try:
         p = subprocess.run(
@@ -94,6 +100,7 @@ def grade_testcase(i):
             timeout=TIMEOUT,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
+            preexec_fn=limit_virtual_memory,
         )
     except subprocess.TimeoutExpired:
         return (0.0, "Runtime error: Timed out")
