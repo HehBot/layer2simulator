@@ -1,6 +1,7 @@
 #include "node_work.h"
 #include "simulation.h"
 
+#include <cassert>
 #include <chrono>
 #include <iostream>
 #include <limits>
@@ -32,14 +33,17 @@ std::optional<std::pair<size_t, size_t>> Simulation::hop_count_with_min_distance
     size_t constexpr INFTY = std::numeric_limits<size_t>::max();
 
     std::unordered_map<MACAddress, size_t> min_distances;
+    std::unordered_map<MACAddress, size_t> min_distance_counts;
     std::unordered_map<MACAddress, size_t> hop_counts;
     std::unordered_set<MACAddress> unvisited;
     for (auto r : nodes) {
         min_distances[r.first] = INFTY;
+        min_distance_counts[r.first] = 0;
         hop_counts[r.first] = INFTY;
         unvisited.insert(r.first);
     }
     min_distances[m1] = 0;
+    min_distance_counts[m1] = 1;
     hop_counts[m1] = 0;
 
     while (true) {
@@ -63,9 +67,17 @@ std::optional<std::pair<size_t, size_t>> Simulation::hop_count_with_min_distance
                 if (min_distances[r.first] > min_dist + r.second) {
                     hop_counts[r.first] = hop_counts[m] + 1;
                     min_distances[r.first] = min_dist + r.second;
-                }
+                    min_distance_counts[r.first] = 1;
+                } else if (min_distances[r.first] == min_dist + r.second)
+                    min_distance_counts[r.first]++;
             }
         }
+    }
+
+    if (min_distance_counts[m2] > 1) {
+        std::cout << "Multiple min distance paths found between " + std::to_string(m1) + " and " + std::to_string(m2) << '\n'
+                  << std::flush;
+        assert(false);
     }
 
     if (min_distances[m2] == INFTY) {
