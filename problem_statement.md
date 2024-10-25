@@ -21,20 +21,22 @@ The simulator reads the segments (i.e. data that is to be sent) from a file give
 
 ### `send_packet`
 #### Declaration
-`void Node::send_packet(MACAddress dest_mac, std::vector<uint8_t> const& packet) const`
+`void Node::send_packet(MACAddress dest_mac, std::vector<uint8_t> const& packet, bool contains_segment) const`
 #### Description
  - `send_packet` is used to send a packet to one of the neighbor nodes at layer 2 (hence "packet" since packets are the payload at L2).
  - You need to specify the exact neighbor node using `dest_mac`.
  - `packet` is a vector of bytes that you want to send.
+ - `contains_segment` is a boolean that you will use to indicate to the simulator whether this packet contains a segment.
  - The contents of this `packet` can be anything, and it is up to you how you want to structure it.
 > Note: `dest_mac` **must** be the MAC address of one of the neighbors of this node.
 
 ### `broadcast_packet_to_all_neighbors`
 #### Declaration
-`void Node::broadcast_packet_to_all_neighbors(std::vector<uint8_t> const& packet) const`
+`void Node::broadcast_packet_to_all_neighbors(std::vector<uint8_t> const& packet, bool contains_segment) const`
 #### Description
  - `broadcast_packet_to_all_neighbors` is used to send a packet to **all** neighbors of the current node.
  - `packet` is a vector of bytes that you want to send.
+ - `contains_segment` is a boolean that you will use to indicate to the simulator whether this packet contains a segment.
  - The contents of this `packet` can be anything, and it is up to you how you want to structure it.
 
 ### `receive_segment`
