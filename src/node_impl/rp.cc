@@ -1,4 +1,4 @@
-#include "dvr.h"
+#include "rp.h"
 
 #include <cstring>
 #include <vector>
@@ -6,22 +6,22 @@
 #define INITIAL_VALIDITY 100
 #define MAX_TTL 4
 
-struct DVRPacketHeader {
+struct RPPacketHeader {
 private:
-    DVRPacketHeader() = default;
+    RPPacketHeader() = default;
 
 public:
-    static DVRPacketHeader payload_header(IPAddress src_ip, IPAddress dest_ip)
+    static RPPacketHeader payload_header(IPAddress src_ip, IPAddress dest_ip)
     {
-        return DVRPacketHeader { false, src_ip, dest_ip, MAX_TTL };
+        return RPPacketHeader { false, src_ip, dest_ip, MAX_TTL };
     }
-    static DVRPacketHeader dv_header(IPAddress my_ip)
+    static RPPacketHeader dv_header(IPAddress my_ip)
     {
-        return DVRPacketHeader { true, my_ip, 0, 0 };
+        return RPPacketHeader { true, my_ip, 0, 0 };
     }
-    static DVRPacketHeader from_bytes(uint8_t const* bytes)
+    static RPPacketHeader from_bytes(uint8_t const* bytes)
     {
-        DVRPacketHeader ph;
+        RPPacketHeader ph;
         memcpy(&ph, bytes, sizeof(ph));
         return ph;
     }
@@ -40,7 +40,7 @@ struct DVEntry {
 };
 
 // helper function that performs gateway lookup and sends packet appropriately
-void DVRNode::send_packet_to(IPAddress dest_ip, std::vector<uint8_t> const& packet) const
+void RPNode::send_packet_to(IPAddress dest_ip, std::vector<uint8_t> const& packet) const
 {
     auto dv_entry = dv_table.find(dest_ip);
     if (dv_entry == dv_table.end() || dv_entry->second.validity == 0) {
@@ -57,19 +57,19 @@ void DVRNode::send_packet_to(IPAddress dest_ip, std::vector<uint8_t> const& pack
     }
 }
 
-void DVRNode::send_segment(IPAddress dest_ip, std::vector<uint8_t> const& segment) const
+void RPNode::send_segment(IPAddress dest_ip, std::vector<uint8_t> const& segment) const
 {
-    DVRPacketHeader pkt_header = DVRPacketHeader::payload_header(ip, dest_ip);
-    std::vector<uint8_t> packet(sizeof(DVRPacketHeader) + segment.size());
-    memcpy(&packet[0], &pkt_header, sizeof(DVRPacketHeader));
-    memcpy(&packet[sizeof(DVRPacketHeader)], &segment[0], segment.size());
+    RPPacketHeader pkt_header = RPPacketHeader::payload_header(ip, dest_ip);
+    std::vector<uint8_t> packet(sizeof(RPPacketHeader) + segment.size());
+    memcpy(&packet[0], &pkt_header, sizeof(RPPacketHeader));
+    memcpy(&packet[sizeof(RPPacketHeader)], &segment[0], segment.size());
 
     send_packet_to(dest_ip, packet);
 }
 
-void DVRNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> packet, size_t distance)
+void RPNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> packet, size_t distance)
 {
-    DVRPacketHeader pkt_header = DVRPacketHeader::from_bytes(&packet[0]);
+    RPPacketHeader pkt_header = RPPacketHeader::from_bytes(&packet[0]);
 
     if (pkt_header.is_dv_table) {
         /*
@@ -81,7 +81,7 @@ void DVRNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> packet, si
         dv_table[neighbor_ip] = RoutingInfo { neighbor_mac, distance, INITIAL_VALIDITY };
         neighbor_ips[neighbor_mac] = neighbor_ip;
 
-        for (DVEntry const* ptr = (DVEntry*)&packet[sizeof(DVRPacketHeader)]; ptr < (DVEntry*)&packet[packet.size()]; ptr++) {
+        for (DVEntry const* ptr = (DVEntry*)&packet[sizeof(RPPacketHeader)]; ptr < (DVEntry*)&packet[packet.size()]; ptr++) {
             DVEntry const& neighbor_dve = *ptr;
             IPAddress dest_ip = neighbor_dve.ip;
 
@@ -130,7 +130,7 @@ void DVRNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> packet, si
             /*
              * the segment was intended for us
              */
-            std::vector<uint8_t> segment(packet.begin() + sizeof(DVRPacketHeader), packet.end());
+            std::vector<uint8_t> segment(packet.begin() + sizeof(RPPacketHeader), packet.end());
             receive_segment(pkt_header.src_ip, segment);
 
         } else {
@@ -145,14 +145,14 @@ void DVRNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> packet, si
             }
             IPAddress dest_ip = pkt_header.dest_ip;
             pkt_header.ttl--;
-            memcpy(&packet[0], &pkt_header, sizeof(DVRPacketHeader));
+            memcpy(&packet[0], &pkt_header, sizeof(RPPacketHeader));
 
             send_packet_to(dest_ip, packet);
         }
     }
 }
 
-void DVRNode::do_periodic()
+void RPNode::do_periodic()
 {
     /*
      * decrement validity of `dv_table` entries
@@ -184,10 +184,10 @@ void DVRNode::do_periodic()
     /*
      * broadcast our DV table to neighbours
      */
-    std::vector<uint8_t> packet(sizeof(DVRPacketHeader) + sizeof(DVEntry) * dv_table.size());
-    DVRPacketHeader pkt_header = DVRPacketHeader::dv_header(ip);
-    memcpy(&packet[0], &pkt_header, sizeof(DVRPacketHeader));
-    size_t off = sizeof(DVRPacketHeader);
+    std::vector<uint8_t> packet(sizeof(RPPacketHeader) + sizeof(DVEntry) * dv_table.size());
+    RPPacketHeader pkt_header = RPPacketHeader::dv_header(ip);
+    memcpy(&packet[0], &pkt_header, sizeof(RPPacketHeader));
+    size_t off = sizeof(RPPacketHeader);
     for (auto dv_entry : dv_table) {
         DVEntry dve = { dv_entry.first, dv_entry.second.gateway, dv_entry.second.distance, dv_entry.second.validity };
         memcpy(&packet[off], &dve, sizeof(dve));

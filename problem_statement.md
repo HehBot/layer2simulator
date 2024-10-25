@@ -1,6 +1,6 @@
 # Lab 7: Network Layer Routing
 
-In this lab, we would be implementing Network Layer over the Link Layer. We have provided you with the simulator that simulates the Link Layer. Your mission is to implement a **Distance Vector Routing Protocol** with the following specifications:
+In this lab, we would be implementing Network Layer over the Link Layer. We have provided you with the simulator that simulates the Link Layer. Your mission is to implement a **Routing Protocol** with the following specifications:
 
 1. Data packets (i.e. packets thay carry bytes from the segment) should be routed ONLY through the shortest path possible
 2. Protocol should be able to detect nodes that have gone down or have come up recently, and should find an alternate shortest path if necessary
@@ -17,7 +17,7 @@ The simulator comes with the Link Layer already implemented. That means it comes
 
 The simulator reads the segments (i.e. data that is to be sent) from a file given in the command line arguments and calls `send_segment` appropriately. You have to send and receive data packets that are routed appropriately to ensure that the segment reaches its intended destination.
 
-**The following are the various function implementations provided to you. You can use them directly in your implementation in `src/node_impl/dvr.cc`:** (For reference as to how to use these functions please see `src/node_impl/naive.cc` and `src/node_impl/blaster.cc`, which implement a naive direct-mapped-assuming-neighbor routing and a send-to-everyone routing algorithm respectively.)
+**The following are the various function implementations provided to you. You can use them directly in your implementation in `src/node_impl/rp.cc`:** (For reference as to how to use these functions please see `src/node_impl/naive.cc` and `src/node_impl/blaster.cc`, which implement a naive direct-mapped-assuming-neighbor routing and a send-to-everyone routing algorithm respectively.)
 
 ### `send_packet`
 #### Declaration
@@ -47,7 +47,7 @@ The simulator reads the segments (i.e. data that is to be sent) from a file give
 
 ## Your Task
 
-**Following are the functions that you need to implement in `src/node_impl/dvr.cc`:**
+**Following are the functions that you need to implement in `src/node_impl/rp.cc`:**
 
 ### `send_segment`
 #### Declaration
@@ -66,7 +66,7 @@ The simulator reads the segments (i.e. data that is to be sent) from a file give
  - `src_mac` is the MAC address of the neighbor from whom this node received the packet.
  - `packet` is a vector of bytes containing the data of the packet.
  - `distance` is the distance of the neighbor from the current node.
-> Hint: Use `distance` argument for your implementation of Distance Vector Routing
+> Hint: Use `distance` argument for your routing implementation as the link cost
 
 ### `do_periodic`
 #### Declaration
@@ -103,7 +103,7 @@ To build the code, we will use GNU Make (please use WSL if you are on Windows, o
 make -j
 ```
 This creates an executable `bin/main`. To run the simulation using
- - node type `naive` (can be one of `naive`, `blaster`, or `dvr`) and files
+ - node type `naive` (can be one of `naive`, `blaster`, or `rp`) and files
  - `file.netspec` (containing description of the network) and
  - `file.msgs` (containing list of segments to be sent and UP/DOWN instructions),
 ```
@@ -120,11 +120,11 @@ To run the simulation with the aforementioned `delay` as 10ms (default 50ms)
 ./bin/main naive file.netspec file.msgs --delay 10
 ```
 ## Submission Instructions
-Submit the files `src/node_impl/dvr.cc` and `src/node_impl/dvr.h` along with a `README.md` markdown explaining your protocol in the following directory structure:
+Submit the files `src/node_impl/rp.cc` and `src/node_impl/rp.h` along with a `README.md` markdown explaining your protocol in the following directory structure:
 ```
 <roll_number>_lab7
-    ├─ dvr.cc
-    ├─ dvr.h
+    ├─ rp.cc
+    ├─ rp.h
     └─ README.md
 ```
 The above should be compressed using
