@@ -3,8 +3,7 @@
 #include <cstring>
 #include <vector>
 
-#define INITIAL_VALIDITY 100
-#define MAX_TTL 4
+#define MAX_TTL 15
 
 struct RPPacketHeader {
 private:
@@ -15,9 +14,9 @@ public:
     {
         return RPPacketHeader { false, src_ip, dest_ip, MAX_TTL };
     }
-    static RPPacketHeader dv_header(IPAddress my_ip)
+    static RPPacketHeader dv_header()
     {
-        return RPPacketHeader { true, my_ip, 0, 0 };
+        return RPPacketHeader { true, 0, 0, 0 };
     }
     static RPPacketHeader from_bytes(uint8_t const* bytes)
     {
@@ -39,7 +38,9 @@ struct DVEntry {
     size_t validity;
 };
 
-// helper function that performs gateway lookup and sends packet appropriately
+/*
+ * helper function that performs gateway lookup and sends packet appropriately
+ */
 void RPNode::send_packet_to(IPAddress dest_ip, std::vector<uint8_t> const& packet) const
 {
     auto dv_entry = dv_table.find(dest_ip);
@@ -75,11 +76,7 @@ void RPNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> packet, siz
         /*
          * the packet is a DV table sent by a neighbor
          */
-        IPAddress neighbor_ip = pkt_header.src_ip;
         MACAddress neighbor_mac = src_mac;
-
-        dv_table[neighbor_ip] = RoutingInfo { neighbor_mac, distance, INITIAL_VALIDITY };
-        neighbor_ips[neighbor_mac] = neighbor_ip;
 
         for (DVEntry const* ptr = (DVEntry*)&packet[sizeof(RPPacketHeader)]; ptr < (DVEntry*)&packet[packet.size()]; ptr++) {
             DVEntry const& neighbor_dve = *ptr;
@@ -161,31 +158,24 @@ void RPNode::do_periodic()
     for (auto& dv_entry : dv_table) {
         if (dv_entry.second.validity == 0)
             to_delete_from_distance_vector.push_back(dv_entry.first);
-        dv_entry.second.validity--;
+        /*
+         * don't decrement validity of self entry
+         */
+        if (dv_entry.first != ip)
+            dv_entry.second.validity--;
     }
 
     /*
      * delete invalidated entries
      */
-    for (auto ip : to_delete_from_distance_vector) {
-        MACAddress gateway = dv_table[ip].gateway;
-
-        /*
-         * if an invalidated entry corresponds to that of a neighbour
-         * it must mean that that neighbour is down
-         */
-        auto neighbor_ips_entry = neighbor_ips.find(gateway);
-        if (neighbor_ips_entry != neighbor_ips.end() && neighbor_ips_entry->second == ip)
-            neighbor_ips.erase(neighbor_ips_entry);
-
+    for (auto ip : to_delete_from_distance_vector)
         dv_table.erase(ip);
-    }
 
     /*
      * broadcast our DV table to neighbours
      */
     std::vector<uint8_t> packet(sizeof(RPPacketHeader) + sizeof(DVEntry) * dv_table.size());
-    RPPacketHeader pkt_header = RPPacketHeader::dv_header(ip);
+    RPPacketHeader pkt_header = RPPacketHeader::dv_header();
     memcpy(&packet[0], &pkt_header, sizeof(RPPacketHeader));
     size_t off = sizeof(RPPacketHeader);
     for (auto dv_entry : dv_table) {
