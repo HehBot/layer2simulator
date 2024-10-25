@@ -2,76 +2,131 @@ import sys
 import math
 import subprocess
 
-NUM_TESTS = 2
-CSV_FILE = ''
-GRADING_TESTCASES = 'example_testcases'
-TIMEOUT = 4
+CSV_FILE = ""
+GRADING_TESTCASES = "grading_testcases"
+TESTS = {1: 12, 2: 19, 3: 26, 4: 33}
+TIMEOUT = 4  # timeout in sec
 
 GRADING_PARAMS = {
-        "undelivered": 1.0,
-        "wrongly_delivered": 1.0,
-        "nr_packets": 1.0,
-        "packets_distance": 1.0,
+    "undel_a": 20.0,
+    "undel_b": 0.4,
+    "wrongdel": 4.0,
+    "nr": 1.0,
+    "dist": 1.0,
 }
 
+MAKE_COMMAND = "make -j CXXFLAGS='-MMD -MP -O3'"
+
+
+def shifted(f):
+    at0 = f(0)
+    at1 = f(1)
+    return lambda x: ((f(x) - at1) / (at0 - at1))
+
+
+def logistic(x, a, b):
+    return 1.0 / math.exp(a * (x - b))
+
+
+def nexp(x, c):
+    return math.exp(-c * x)
+
+
 def grade_for_a_run(output):
-    nr_segments = float(output[6])
-    nr_undelivered_segments = float(output[4])
-    nr_wrongly_delivered_segments = float(output[5])
     packets_transmitted = float(output[0])
     ideal_packets_transmitted = float(output[1])
     packets_distance = float(output[2])
     ideal_packets_distance = float(output[3])
+    nr_undelivered_segments = float(output[4])
+    nr_wrongly_delivered_segments = float(output[5])
+    nr_segments = float(output[6])
 
-    accuracy_score = math.exp(-GRADING_PARAMS["undelivered"]*nr_undelivered_segments / nr_segments) * math.exp(-GRADING_PARAMS["wrongly_delivered"] * nr_wrongly_delivered_segments / nr_segments)
-    efficiency_score = math.exp(-GRADING_PARAMS["nr_packets"] * math.fabs(packets_transmitted - ideal_packets_transmitted) / ideal_packets_transmitted) * math.exp(-GRADING_PARAMS["packets_distance"] * math.fabs(packets_distance - ideal_packets_distance) / ideal_packets_distance)
+    undel = nr_undelivered_segments / nr_segments
+    wrongdel = nr_wrongly_delivered_segments / nr_segments
+    trans = 1.0 - packets_transmitted / ideal_packets_transmitted
+    dist = 1.0 - packets_distance / ideal_packets_distance
 
-    return accuracy_score * efficiency_score
+    l = lambda x: logistic(x, GRADING_PARAMS["undel_a"], GRADING_PARAMS["undel_b"])
+    undel_score = shifted(l)(undel)
 
-# run 'make -j > compilation.txt' and get the error code
+    l = lambda x: nexp(x, GRADING_PARAMS["wrongdel"])
+    wrongdel_score = shifted(l)(wrongdel)
+
+    efficiency_score = nexp(math.fabs(trans), GRADING_PARAMS["nr"]) * nexp(
+        math.fabs(dist), GRADING_PARAMS["dist"]
+    )
+
+    return undel_score * wrongdel_score * efficiency_score
+
+
+# run 'make -j' and get the error code and output
 # if the error code is 0, then the compilation is successful
-# if the error code is not 0, then the compilation is not successful
 def compile():
-    # run 'g++ -H rp.h -o /dev/null 2>&1 | grep -e '\.\.* [^/]' | awk '{print $2}'' and get the output in a variable
-    # and check out is equal to '../node.h'
+    allowed_headers_list = {
+        "rp.h": set(["src/node_impl/../node.h"]),
+        "rp.cc": set(["src/node_impl/../node.h", "src/node_impl/rp.h"]),
+    }
+    for file, allowed_headers in allowed_headers_list.items():
+        out = (
+            subprocess.check_output(
+                "g++ -H src/node_impl/%s -o /dev/null 2>&1 | grep -e '\.\.* [^/]' | awk '{print $2}'"
+                % (file),
+                shell=True,
+            )
+            .decode("utf-8")
+            .strip()
+        )
+        out = set(out.split()) - allowed_headers
+        if out != set():
+            return -1, "Compilation error: Disallowed headers: " + str(out)
 
-    out = subprocess.check_output("g++ -H src/node_impl/rp.h -o /dev/null 2>&1 | grep -e '\.\.* [^/]' | awk '{print $2}'", shell=True).decode('utf-8')
+    result = subprocess.run(
+        MAKE_COMMAND, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
+    return result.returncode, "Compilation error: " + result.stderr.decode("utf-8")
 
-    if out.strip() != 'src/node_impl/../node.h':
-        return -1
-
-    out = subprocess.check_output("g++ -H src/node_impl/rp.cc -o /dev/null 2>&1 | grep -e '\.\.* [^/]' | awk '{print $2}'", shell=True).decode('utf-8')
-
-    out = sorted(out.strip().split('\n'))
-    
-    if out != ['src/node_impl/../node.h', 'src/node_impl/rp.h']:
-        return -1
-
-    error_code = subprocess.call(['make', '-j'], stdout=open('compilation.txt', 'w'))
-    return error_code
 
 def grade_testcase(i):
     try:
-        out = subprocess.check_output(f'./bin/main rp {GRADING_TESTCASES}/{i}.netspec {GRADING_TESTCASES}/{i}.msgs -g', shell=True, timeout=TIMEOUT, stderr=subprocess.PIPE).decode('utf-8')
+        p = subprocess.run(
+            f"./bin/main rp {GRADING_TESTCASES}/{i}.netspec {GRADING_TESTCASES}/{i}.msgs -g",
+            shell=True,
+            timeout=TIMEOUT,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
     except subprocess.TimeoutExpired:
-        return 0.0, "Timed out"
-    except subprocess.CalledProcessError as e:
-        return 0.0, str(e)
-    out = [x.split() for x in out.strip().split(('='*50+'\n')*2)[1:]]
+        return (0.0, "Runtime error: Timed out")
+    if p.returncode != 0:
+        return (0.0, "Runtime error: " + p.stderr.decode("utf-8"))
+    out = [
+        x.split()
+        for x in p.stdout.decode("utf-8").strip().split(("=" * 50 + "\n") * 2)[1:]
+    ]
     marks = [grade_for_a_run(x) for x in out]
-    return sum(marks)/len(marks), "Ran successfully"
+    return (sum(marks) / len(marks), None)
+
 
 def grade(roll):
-    grade = [0]*NUM_TESTS
-    
-    error_code = compile()
+    grade = dict([(i, (0.0, None)) for i in TESTS.keys()])
+
+    error_code, reason = compile()
     if error_code != 0:
-        return grade
+        return (grade, reason)
 
-    for i in range(NUM_TESTS):
-        grade[i] = grade_testcase(i+1)
+    for i, weight in TESTS.items():
+        g, r = grade_testcase(i)
+        grade[i] = (weight * g, r)
 
-    return grade
+    return (grade, None)
 
-if __name__ == '__main__':
-    print(grade('lmao'))
+
+if __name__ == "__main__":
+    g = grade("lmao")
+    if g[1] is not None:
+        print(g[1])
+    total = 0.0
+    for _, m in g[0].items():
+        total += m[0]
+    g[0]["total"] = round(total * 10) / 10.0
+    print(g[0])
