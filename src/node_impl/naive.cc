@@ -43,7 +43,7 @@ void NaiveNode::send_segment(IPAddress dest_ip, std::vector<uint8_t> const& segm
     memcpy(&packet[0], &ph, sizeof(ph));
     memcpy(&packet[sizeof(ph)], &segment[0], segment.size());
 
-    send_packet(dest_mac, packet);
+    send_packet(dest_mac, packet, /*contains_segment*/ true);
 }
 void NaiveNode::receive_packet(MACAddress src_mac, std::vector<uint8_t> packet, size_t distance)
 {
@@ -68,5 +68,5 @@ void NaiveNode::do_periodic()
     std::vector<uint8_t> packet(sizeof(ph) + s.length());
     memcpy(&packet[0], &ph, sizeof(ph));
     memcpy(&packet[sizeof(ph)], &s[0], s.length());
-    broadcast_packet_to_all_neighbors(packet);
+    broadcast_packet_to_all_neighbors(packet, /*contains_segment*/ false);
 }

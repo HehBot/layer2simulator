@@ -1,7 +1,4 @@
 #include "node.h"
-#undef send_packet
-#undef broadcast_packet_to_all_neighbors
-
 #include "node_impl/blaster.h"
 #include "node_impl/naive.h"
 #include "node_impl/rp.h"
@@ -51,13 +48,13 @@ void Simulation::log(LogLevel l, std::string logline) const
               << std::flush;
 }
 
-void Node::send_packet(MACAddress dest_mac, std::vector<uint8_t> const& packet, char const* caller_name) const
+void Node::send_packet(MACAddress dest_mac, std::vector<uint8_t> const& packet, bool contains_segment) const
 {
-    simul->send_packet(this->mac, dest_mac, packet, std::string("do_periodic") == caller_name);
+    simul->send_packet(this->mac, dest_mac, packet, contains_segment);
 }
-void Node::broadcast_packet_to_all_neighbors(std::vector<uint8_t> const& packet, char const* caller_name) const
+void Node::broadcast_packet_to_all_neighbors(std::vector<uint8_t> const& packet, bool contains_segment) const
 {
-    simul->broadcast_packet_to_all_neighbors(this->mac, packet, std::string("do_periodic") == caller_name);
+    simul->broadcast_packet_to_all_neighbors(this->mac, packet, contains_segment);
 }
 void Node::receive_segment(IPAddress src_ip, std::vector<uint8_t> const& segment) const
 {
@@ -67,7 +64,7 @@ void Node::log(std::string logline) const
 {
     simul->node_log(this->mac, logline);
 }
-void Simulation::send_packet(MACAddress src_mac, MACAddress dest_mac, std::vector<uint8_t> const& packet, bool from_do_periodic)
+void Simulation::send_packet(MACAddress src_mac, MACAddress dest_mac, std::vector<uint8_t> const& packet, bool contains_segment)
 {
     if (nodes.count(dest_mac) == 0) {
         log(LogLevel::ERROR, "Attempted to send to MAC address '" + std::to_string(dest_mac) + "' which is not a MAC address of any node");
@@ -90,21 +87,21 @@ void Simulation::send_packet(MACAddress src_mac, MACAddress dest_mac, std::vecto
 
     total_packets_transmitted++;
     total_packets_distance += it->second;
-    if (!from_do_periodic) {
+    if (contains_segment) {
         packets_transmitted++;
         packets_distance += it->second;
     }
 
     dest_nt->receive_packet(src_mac, packet, it->second);
 }
-void Simulation::broadcast_packet_to_all_neighbors(MACAddress src_mac, std::vector<uint8_t> const& packet, bool from_do_periodic)
+void Simulation::broadcast_packet_to_all_neighbors(MACAddress src_mac, std::vector<uint8_t> const& packet, bool contains_segment)
 {
     for (auto r : adj.at(src_mac)) {
         MACAddress dest_mac = r.first;
 
         total_packets_transmitted++;
         total_packets_distance += r.second;
-        if (!from_do_periodic) {
+        if (contains_segment) {
             packets_transmitted++;
             packets_distance += r.second;
         }
