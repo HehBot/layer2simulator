@@ -129,7 +129,13 @@ def grade(roll):
 
 
 if __name__ == "__main__":
-    g = grade("lmao")
+    
+    if len(sys.argv) != 2:
+        print("Usage: python3 grade.py <roll_number>")
+        sys.exit(1)
+
+    roll = sys.argv[1]
+    g = grade(roll)
     if g[1] is not None:
         print(g[1])
     total = 0.0

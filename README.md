@@ -150,3 +150,43 @@ For each test case, you will receive points depending on how many segments made 
 
 ## Plagiarism Warning
 **You are NOT permitted to share code solutions with others or to use GPTs for generating code. Any cases of plagiarism/GPT use will be dealt with as per institute policy without exception. We will be running all submissions through MOSS, GPT detectors, and a host of other countermeasures.**
+
+## Autograder
+
+To use `grade.py` script, the directory structure should look as follows:
+```
+submission
+├── grade.py
+├── grading_testcases
+│   ├── 1.msgs
+│   ├── 1.netspec
+│   ├── 2.msgs
+│   ├── 2.netspec
+│   ├── 3.msgs
+│   ├── 3.netspec
+│   ├── 4.msgs
+│   └── 4.netspec
+├── Makefile
+└── src
+    ├── main.cc
+    ├── node.h
+    ├── node_impl
+    │   ├── blaster.cc
+    │   ├── blaster.h
+    │   ├── naive.cc
+    │   ├── naive.h
+    │   ├── rp.cc
+    │   └── rp.h
+    ├── node_work.cc
+    ├── node_work.h
+    ├── opt.c
+    ├── run.cc
+    ├── simulation.cc
+    └── simulation.h
+```
+`rp.cc` and `rp.hh` files in the above directory structure are the ones submitted by students. Rest of the files should be used as is from this repository.
+
+
+To run autograder use `python3 grade.py <roll number>`
+
+This will only grade a single submission. You can automate grading a batch of submissions by modifying the `grade.py` file according to your need.
